@@ -1,0 +1,6 @@
+{
+  "name": "CakeCampus - Bakery Delivery",
+  "description": "Student bakery ordering app with campus selection, cake customization, instant QR checkout, and full manual detail editing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

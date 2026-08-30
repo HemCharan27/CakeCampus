@@ -1,0 +1,721 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../../context/AppContext';
+import { DateTime } from 'luxon';
+import { 
+  ArrowLeft, 
+  MapPin, 
+  Clock, 
+  ShieldCheck, 
+  CheckCircle2, 
+  AlertCircle, 
+  Loader2,
+  Calendar,
+  QrCode,
+  Copy,
+  Check,
+  Sparkles,
+  Upload,
+  Image as ImageIcon,
+  X
+} from 'lucide-react';
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const IST_ZONE = 'Asia/Kolkata';
+
+export const CheckoutScreen: React.FC = () => {
+  const { 
+    cart, 
+    itemsTotal, 
+    setCurrentScreen, 
+    setLastCreatedOrder, 
+    clearCart,
+    customerUser,
+    selectedCollege,
+    setIsAuthModalOpen,
+    setAuthModalMode
+  } = useApp();
+
+  const [step, setStep] = useState<'details' | 'payment'>('details');
+  const [createdOrder, setCreatedOrder] = useState<any>(null);
+
+  if (cart.length === 0 && step === 'details') {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
+        <p className="text-sm text-zinc-500">Your cart is empty</p>
+        <button
+          onClick={() => setCurrentScreen('catalog')}
+          className="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold cursor-pointer"
+        >
+          Browse Bakery Menu
+        </button>
+      </div>
+    );
+  }
+
+  // Calculate earliest valid pickup date in IST based on the 6:00 PM cutoff rule
+  const calculateEarliestPickupDate = () => {
+    const nowIST = DateTime.now().setZone(IST_ZONE);
+    const daysToAdd = nowIST.hour >= 18 ? 2 : 1;
+    return nowIST.plus({ days: daysToAdd }).toFormat('yyyy-MM-dd');
+  };
+
+  const earliestDateStr = calculateEarliestPickupDate();
+
+  // Form states with auto-fill from logged-in customer profile
+  const [name, setName] = useState(customerUser?.name || '');
+  const [phone, setPhone] = useState(customerUser?.phone || '');
+  const [email, setEmail] = useState(customerUser?.email || '');
+  const [rollNumber, setRollNumber] = useState(customerUser?.rollNumber || '');
+  const [cakeMessage, setCakeMessage] = useState('');
+  const [pickupDate, setPickupDate] = useState(earliestDateStr);
+  
+  // Payment states
+  const [upiUtr, setUpiUtr] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+
+  // Auto-fill when customerUser loads or signs in
+  useEffect(() => {
+    if (customerUser) {
+      if (customerUser.name && !name) setName(customerUser.name);
+      if (customerUser.email && !email) setEmail(customerUser.email);
+      if (customerUser.phone && !phone) setPhone(customerUser.phone);
+      if (customerUser.rollNumber && !rollNumber) setRollNumber(customerUser.rollNumber);
+    }
+  }, [customerUser]);
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serverConfig, setServerConfig] = useState<any>(null);
+
+  // Load server config
+  useEffect(() => {
+    fetch(`${API_BASE}/api/config`)
+      .then(res => res.json())
+      .then(data => setServerConfig(data))
+      .catch(err => console.warn('Failed to load server config:', err));
+  }, []);
+
+  const localDeliveryCharge = serverConfig?.deliveryCharge ?? 50;
+  const localGrandTotal = itemsTotal + localDeliveryCharge;
+
+  const handleCopy = (text: string, type: 'upi' | 'amount') => {
+    navigator.clipboard?.writeText(text);
+    if (type === 'upi') {
+      setCopiedUpi(true);
+      setTimeout(() => setCopiedUpi(false), 2000);
+    } else {
+      setCopiedAmount(true);
+      setTimeout(() => setCopiedAmount(false), 2000);
+    }
+  };
+
+  const processImageFile = (file: File) => {
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setErrorMessage('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('File size exceeds 5MB limit.');
+      return;
+    }
+    
+    setErrorMessage(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        setScreenshotBase64(base64);
+        setScreenshotPreview(base64);
+      };
+      if (e.target?.result) {
+        img.src = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const validateForm = () => {
+    if (!name || !name.trim()) return 'Please enter your full name.';
+    
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length < 10) {
+      return 'Please enter a valid 10-digit mobile number.';
+    }
+    
+    if (!email || !email.trim() || !email.includes('@')) {
+      return 'Please enter a valid email address.';
+    }
+    
+    if (!rollNumber || !rollNumber.trim()) {
+      return 'Please enter your student roll number.';
+    }
+    
+    // Delivery/Pickup Date is strictly mandatory
+    if (!pickupDate || !pickupDate.trim()) {
+      return 'Delivery/Pickup Date is mandatory before proceeding.';
+    }
+
+    // Check cutoff rule in IST
+    try {
+      const selectedDateIST = DateTime.fromISO(pickupDate.trim(), { zone: IST_ZONE }).startOf('day');
+      const cutoffIST = selectedDateIST.minus({ days: 1 }).set({ hour: 18, minute: 0, second: 0, millisecond: 0 });
+      const nowIST = DateTime.now().setZone(IST_ZONE);
+
+      if (nowIST > cutoffIST) {
+        return 'Orders for this date close at 6:00 PM the previous day. Please choose a future pickup date.';
+      }
+    } catch {
+      // ignore
+    }
+
+    return null;
+  };
+
+  const handlePlaceOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const error = validateForm();
+    if (error) {
+      setErrorMessage(error);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsLoading(true);
+
+    try {
+      const orderPayload = {
+        customer: {
+          name: name.trim(),
+          phone: phone.trim(),
+          email: email.trim(),
+          rollNumber: rollNumber.trim().toUpperCase(),
+          college: selectedCollege?.name || customerUser?.college || ''
+        },
+        college: selectedCollege?.name || customerUser?.college || '',
+        pickupPoint: selectedCollege?.pickupPoint || 'CakeCampus Point',
+        cakeMessage: cakeMessage.trim(),
+        pickupDate: pickupDate.trim(),
+        items: cart.map(item => ({
+          cakeId: item.cakeId,
+          weightKey: item.weightKey,
+          flavourKey: item.flavourKey,
+          toppingKeys: item.toppingKeys || [],
+          addOnKeys: item.addOnKeys || [],
+          qty: item.qty,
+        }))
+      };
+
+      const createRes = await fetch(`${API_BASE}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload)
+      });
+
+      const orderData = await createRes.json();
+      if (!createRes.ok || !orderData.success) {
+        throw new Error(orderData.error || 'Failed to place order.');
+      }
+
+      setCreatedOrder(orderData);
+      setStep('payment');
+      setIsLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      console.error('Order creation error:', err);
+      setErrorMessage(err.message || 'An error occurred while placing your order.');
+      setIsLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!upiUtr || upiUtr.trim().length < 8) {
+      setErrorMessage('Please enter a valid UTR number (at least 8 characters).');
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsLoading(true);
+
+    try {
+      const orderId = createdOrder.orderId || createdOrder.order?.orderId;
+      let screenshotUrl: string | undefined;
+      if (screenshotBase64) {
+        const uploadRes = await fetch(`${API_BASE}/api/uploads/payment-proof`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageData: screenshotBase64 })
+        });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok || !uploadData.screenshotUrl) throw new Error(uploadData.error || 'Failed to upload screenshot.');
+        screenshotUrl = uploadData.screenshotUrl;
+      }
+
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}/payment-proof`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          utr: upiUtr.trim(),
+          screenshotUrl
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit payment details.');
+      }
+
+      const finalOrder = data.order || createdOrder.order || { orderId, totalAmount: localGrandTotal, status: 'PAYMENT_SUBMITTED' };
+      setLastCreatedOrder(finalOrder);
+      clearCart();
+      setIsLoading(false);
+      setCurrentScreen('success');
+    } catch (err: any) {
+      console.error('Payment submit error:', err);
+      setErrorMessage(err.message || 'An error occurred while submitting payment details.');
+      setIsLoading(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Payment data for step 2
+  const finalOrderId = createdOrder?.orderId || createdOrder?.order?.orderId || '';
+  const finalUpiId = createdOrder?.upiId || serverConfig?.campusUpiId || 'cakecampus@okhdfcbank';
+  const finalPayeeName = createdOrder?.payeeName || 'CakeCampus';
+  const finalTotalAmount = createdOrder?.totalAmount || localGrandTotal;
+  const upiNote = createdOrder?.upiNote || `CakeCampus ${finalOrderId}`;
+  const upiIntentUrl = `upi://pay?pa=${finalUpiId}&pn=${encodeURIComponent(finalPayeeName)}&am=${finalTotalAmount}&cu=INR&tn=${encodeURIComponent(upiNote)}`;
+  const customQr = createdOrder?.customUpiQrUrl || serverConfig?.customUpiQrUrl;
+  const qrImageUrl = customQr || (createdOrder?.upiQrString?.startsWith('http') ? createdOrder.upiQrString : `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiIntentUrl)}`);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-32 space-y-6">
+      {/* Back button */}
+      <button
+        onClick={() => step === 'payment' ? setStep('details') : setCurrentScreen('cart')}
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-600 hover:text-zinc-900 transition-colors cursor-pointer"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>{step === 'payment' ? 'Back to Order Details' : 'Back to Cart'}</span>
+      </button>
+
+      <div className="border-b border-[#F3EAE3] pb-3">
+        <h1 className="text-2xl font-black text-[#2A050F] font-serif">
+          {step === 'details' ? 'Pre-Order Checkout' : 'Complete Payment'}
+        </h1>
+        <p className="text-xs text-zinc-500">
+          {step === 'details' 
+            ? 'Enter student details and choose scheduled pickup date'
+            : 'Scan QR to pay and submit transaction details for verification'
+          }
+        </p>
+      </div>
+
+      {/* Error Alert */}
+      {errorMessage && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-start gap-2.5 shadow-xs">
+          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-bold">Notice</p>
+            <p className="font-normal text-rose-800 mt-0.5">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {step === 'details' && (
+        <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Left 2 Cols: Details & Date */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Pickup Point Notice */}
+            <div className="bg-white p-5 rounded-2xl border border-[#F3EAE3] shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-rose-600" />
+                  <span>Pickup Location</span>
+                </h2>
+                <span className="text-[11px] bg-rose-50 text-rose-700 font-bold px-2.5 py-0.5 rounded-full border border-rose-200">
+                  Fixed Point
+                </span>
+              </div>
+              <div className="bg-[#FAF7F5] p-3.5 rounded-xl border border-[#E8DED6]">
+                <p className="text-sm font-bold text-[#2A050F]">CakeCampus Point</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Central Campus • Student Activity Center Hub (Ground Floor)
+                </p>
+              </div>
+            </div>
+
+            {/* Pickup Date */}
+            <div className="bg-white p-5 rounded-2xl border-2 border-rose-300 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label htmlFor="pickup-date-input" className="text-xs font-bold text-[#2A050F] uppercase tracking-wide flex items-center gap-1.5">
+                  <Calendar className="w-4 h-4 text-rose-600" />
+                  <span>Delivery / Pickup Date <span className="text-rose-600 font-black">* REQUIRED</span></span>
+                </label>
+                <span className="text-[11px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-md">
+                  Strict 6 PM Cutoff
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  id="pickup-date-input"
+                  type="date"
+                  min={earliestDateStr}
+                  value={pickupDate}
+                  onChange={(e) => setPickupDate(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-[#FAF7F5] border-2 border-rose-200 focus:border-rose-600 focus:outline-hidden text-sm font-bold text-[#2A050F]"
+                />
+                <div className="bg-rose-50 p-3 rounded-xl border border-rose-200 text-xs text-rose-900 flex items-start gap-2">
+                  <Clock className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold">Cutoff Policy:</p>
+                    <p className="text-[11px] text-rose-800 mt-0.5">
+                      Orders for this date close at <strong>6:00 PM the previous day</strong>. Earliest available pickup date is <strong>{DateTime.fromISO(earliestDateStr).toFormat('dd LLL yyyy')}</strong>.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Details */}
+            <div className="bg-white p-5 rounded-2xl border border-[#F3EAE3] shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3">
+                <h2 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide">
+                  Student / Customer Details
+                </h2>
+                {customerUser ? (
+                  <span className="text-[11px] bg-emerald-50 text-emerald-800 font-bold px-2.5 py-1 rounded-full border border-emerald-200 inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    <span>Auto-filled from {customerUser.name}</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthModalMode('google');
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="text-[11px] text-rose-600 hover:text-rose-800 font-bold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3 text-rose-500" />
+                    <span>Sign in with Google to auto-fill</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    Full Name <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Charan Veesam"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    Mobile Phone Number <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9848034567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    Email Address <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="e.g. student@college.edu"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">
+                    Student Roll Number <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 21VV1A0589"
+                    value={rollNumber}
+                    onChange={(e) => setRollNumber(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F] uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* Cake Message */}
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-semibold text-zinc-700">
+                  Message or Name on Cake (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Happy 20th Birthday Ananya! 🎉"
+                  value={cakeMessage}
+                  onChange={(e) => setCakeMessage(e.target.value)}
+                  maxLength={45}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                />
+                <span className="text-[10px] text-zinc-400 block text-right">Max 45 chars</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right 1 Col: Summary & Place Order Button */}
+          <div className="bg-white p-6 rounded-3xl border border-[#F3EAE3] shadow-xs space-y-5">
+            <h2 className="text-base font-bold text-[#2A050F] border-b border-[#F3EAE3] pb-3">
+              Order Summary
+            </h2>
+
+            {/* Items Recap */}
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {cart.map(item => (
+                <div key={item.id} className="flex justify-between text-xs text-zinc-600 pb-1.5 border-b border-zinc-100">
+                  <div>
+                    <span className="font-semibold text-zinc-900">{item.qty}x {item.cakeName}</span>
+                    <span className="block text-[10px] text-zinc-400">{item.weightKey} • {item.flavourKey}</span>
+                  </div>
+                  <span className="font-bold text-zinc-800">₹{item.lineTotal}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-2 text-xs text-zinc-600 pt-2 border-t border-zinc-100">
+              <div className="flex justify-between">
+                <span>Items Total</span>
+                <span className="font-semibold text-zinc-900">₹{itemsTotal}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Campus Delivery Charge</span>
+                <span className="font-semibold text-zinc-900">₹{localDeliveryCharge}</span>
+              </div>
+              <div className="pt-2 border-t border-zinc-200 flex justify-between items-baseline font-bold text-sm text-[#2A050F]">
+                <span>Total Payable</span>
+                <span className="text-xl text-rose-600 font-black">₹{localGrandTotal}</span>
+              </div>
+            </div>
+
+            {/* Payment Trust Badges */}
+            <div className="bg-zinc-50 p-3 rounded-xl border border-zinc-200/60 space-y-1.5 text-[11px] text-zinc-600">
+              <div className="flex items-center gap-1.5 font-bold text-zinc-800">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Campus Secure Pre-Order</span>
+              </div>
+              <p className="text-[10px] text-zinc-500">
+                Pickup date is locked and scheduled fresh for CakeCampus Point.
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-bold text-sm shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Placing Order...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Place Order</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {step === 'payment' && (
+        <form onSubmit={handlePaymentSubmit} className="max-w-2xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-3xl border-2 border-rose-300 shadow-sm space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-xl font-black text-[#2A050F] flex items-center justify-center gap-2">
+                <QrCode className="w-5 h-5 text-rose-600" />
+                Scan to Pay
+              </h2>
+              <p className="text-sm text-zinc-600 font-medium">Order ID: <span className="font-mono font-bold text-zinc-900">{finalOrderId}</span></p>
+            </div>
+
+            <div className="bg-[#FAF7F5] p-6 rounded-2xl border border-[#E8DED6] space-y-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative bg-white p-3 rounded-2xl border-2 border-rose-200 shadow-sm">
+                  <img
+                    src={qrImageUrl}
+                    alt="Campus UPI QR"
+                    className="w-48 h-48 object-contain"
+                  />
+                </div>
+                
+                <div className="text-center space-y-1">
+                  <p className="text-sm font-bold text-zinc-500">Amount to Pay</p>
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-3xl font-black text-rose-600 font-serif">₹{finalTotalAmount}</p>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(finalTotalAmount.toString(), 'amount')}
+                      className="p-1.5 rounded-lg bg-zinc-200 hover:bg-zinc-300 text-zinc-700 cursor-pointer transition-colors"
+                      title="Copy Amount"
+                    >
+                      {copiedAmount ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-3">
+                  <div className="bg-white p-3 rounded-xl border border-zinc-200 flex items-center justify-between gap-3">
+                    <div className="truncate">
+                      <span className="text-xs text-zinc-500 block font-semibold mb-0.5">UPI ID</span>
+                      <span className="font-mono font-bold text-zinc-800">{finalUpiId}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(finalUpiId, 'upi')}
+                      className="px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                    >
+                      {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedUpi ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct UPI App launcher */}
+                <a
+                  href={upiIntentUrl}
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
+                >
+                  <span>Pay via UPI App (GPay / PhonePe / Paytm) ↗</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-5 pt-4 border-t border-zinc-200">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2A050F] block">
+                  UPI UTR / Transaction Reference Number <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 312345678901"
+                  value={upiUtr}
+                  onChange={(e) => setUpiUtr(e.target.value)}
+                  minLength={8}
+                  required
+                  className="w-full px-4 py-3 rounded-xl bg-white border-2 border-rose-200 focus:border-rose-600 focus:outline-hidden font-mono text-sm text-zinc-900 font-bold tracking-wider"
+                />
+                <p className="text-xs text-zinc-500">Enter the 12-digit reference number from your payment app.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-[#2A050F] block">
+                  Payment Screenshot (Optional)
+                </label>
+                
+                {!screenshotPreview ? (
+                  <label className="border-2 border-dashed border-zinc-300 rounded-xl p-6 flex flex-col items-center justify-center gap-2 bg-zinc-50 hover:bg-zinc-100 cursor-pointer transition-colors">
+                    <Upload className="w-6 h-6 text-zinc-400" />
+                    <span className="text-xs font-semibold text-zinc-600">Click to upload screenshot</span>
+                    <span className="text-[10px] text-zinc-400">JPEG, PNG, WebP up to 5MB</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={(e) => e.target.files && processImageFile(e.target.files[0])}
+                    />
+                  </label>
+                ) : (
+                  <div className="relative inline-block">
+                    <img src={screenshotPreview} alt="Screenshot Preview" className="h-32 rounded-lg border border-zinc-200 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScreenshotPreview(null);
+                        setScreenshotBase64(null);
+                      }}
+                      className="absolute -top-2 -right-2 bg-rose-100 text-rose-600 p-1 rounded-full hover:bg-rose-200 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 flex gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                <p className="text-xs text-amber-900 font-medium">
+                  ⚠️ <strong>Warning:</strong> Fake payment details or invalid UTRs will lead to immediate order cancellation.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading || !upiUtr || upiUtr.length < 8}
+                className="w-full py-4 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-bold text-sm shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Submit Payment Details</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};
