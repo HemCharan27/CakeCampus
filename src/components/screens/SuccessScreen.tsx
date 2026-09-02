@@ -1,4 +1,4 @@
-ï»¿import React, { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import confetti from 'canvas-confetti';
 import { CheckCircle2, MapPin, Clock, Copy, SearchCheck, Cake } from 'lucide-react';
@@ -46,9 +46,9 @@ export const SuccessScreen: React.FC = () => {
         </div>
         <div className="space-y-1">
           <span className="text-[11px] bg-[#5C2D14]/20 text-[#7C5542] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-[#5C2D14]/30">
-            Payment Submitted â€” Awaiting Verification
+            Payment Submitted — Awaiting Verification
           </span>
-          <h1 className="text-2xl sm:text-3xl font-black text-amber-50 font-serif pt-2">Order Placed Successfully! ðŸŽ‰</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-amber-50 font-serif pt-2">Order Placed Successfully! ??</h1>
           <p className="text-xs sm:text-sm text-amber-200/70 max-w-md mx-auto">
             Thank you, <strong className="text-amber-100">{lastCreatedOrder.customer.name}</strong>! Your payment details have been submitted. We'll verify and confirm your order shortly.
           </p>
@@ -99,8 +99,8 @@ export const SuccessScreen: React.FC = () => {
                 <p className="font-bold text-[#1A0A04]">{item.qty}x {item.cakeNameSnapshot}</p>
                 <p className="text-[11px] text-[#7C5542]">
                   {item.weightKey} &bull; {item.flavourKey}
-                  {item.toppingKeys?.length ? ` â€¢ Toppings: ${item.toppingKeys.join(', ')}` : ''}
-                  {item.addOnKeys?.length ? ` â€¢ Add-ons: ${item.addOnKeys.join(', ')}` : ''}
+                  {item.toppingKeys?.length ? ` • Toppings: ${item.toppingKeys.join(', ')}` : ''}
+                  {item.addOnKeys?.length ? ` • Add-ons: ${item.addOnKeys.join(', ')}` : ''}
                 </p>
               </div>
               <span className="font-bold text-[#1A0A04]">&#8377;{item.lineTotal}</span>
@@ -115,7 +115,7 @@ export const SuccessScreen: React.FC = () => {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
-        <button onClick={handleTrack} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r -white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+        <button onClick={handleTrack} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
           <SearchCheck className="w-4 h-4" /><span>Track Order Status</span>
         </button>
         <button onClick={() => setCurrentScreen('catalog')} className="flex-1 py-3.5 rounded-xl bg-[#FFF8EE] hover:bg-[#F5EDE4] text-[#1A0A04] border border-[#5C2D14]/25 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer">

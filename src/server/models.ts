@@ -431,13 +431,16 @@ export const createCollegeInDb = async (data: Partial<CollegeDocument>): Promise
 };
 
 export const deleteCollegeInDb = async (id: string): Promise<boolean> => {
+  let deletedFromMongo = false;
   if (isMongoConnected) {
     try {
+      let result: any = null;
       if (mongoose.isValidObjectId(id)) {
-        await CollegeModel.findByIdAndDelete(id);
+        result = await CollegeModel.findByIdAndDelete(id);
       } else {
-        await CollegeModel.findOneAndDelete({ $or: [{ _id: id }, { id }, { code: id }] });
+        result = await CollegeModel.findOneAndDelete({ $or: [{ _id: id }, { id }, { code: id }] });
       }
+      if (result) deletedFromMongo = true;
     } catch (e) {
       console.warn('Mongo delete college error:', e);
     }
@@ -453,7 +456,7 @@ export const deleteCollegeInDb = async (id: string): Promise<boolean> => {
   } catch (err) {
     console.error('Delete college local file error:', err);
   }
-  return true;
+  return deletedFromMongo;
 };
 
 // Cakes
@@ -496,7 +499,7 @@ export const getCakeById = async (id: string): Promise<CakeDocument | null> => {
           { id: id },
           { _id: id },
           { id: normId },
-          { name: new RegExp(`^${id}$`, 'i') }
+          { name: new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
         ]
       }).lean();
       if (foundAlt) return { ...foundAlt, _id: String(foundAlt._id), id: String(foundAlt._id) } as CakeDocument;
@@ -529,8 +532,8 @@ export const getCakeById = async (id: string): Promise<CakeDocument | null> => {
       if (numMatch) return numMatch;
     }
 
-    // 4. Return closest matching or first cake
-    return list[0] || null;
+    // 4. No match found
+    return null;
   } catch {
     return null;
   }

@@ -247,6 +247,7 @@ export const SignInScreen: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    maxLength={254}
                     className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
@@ -262,6 +263,8 @@ export const SignInScreen: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={4}
+                    maxLength={128}
                     className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
@@ -289,6 +292,8 @@ export const SignInScreen: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    maxLength={100}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>\{}]/g, '') }}
                     className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
@@ -303,6 +308,8 @@ export const SignInScreen: React.FC = () => {
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
                     required
+                    maxLength={30}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.toUpperCase().replace(/[^A-Z0-9\-\/]/g, '') }}
                     className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 uppercase placeholder-amber-300/30"
                   />
                 </div>
@@ -315,6 +322,8 @@ export const SignInScreen: React.FC = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
+                    maxLength={10}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '') }}
                     className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
@@ -328,6 +337,7 @@ export const SignInScreen: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  maxLength={254}
                   className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                 />
               </div>
@@ -340,6 +350,8 @@ export const SignInScreen: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={4}
+                  maxLength={128}
                   className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                 />
               </div>

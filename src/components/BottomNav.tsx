@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
 import { Home, Cake, ShoppingBag, PackageCheck } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export const BottomNav: React.FC = () => {
                 <Icon className="w-5 h-5" />
               </div>
               {badge != null && badge > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-gradient-to-br -white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-2 bg-gradient-to-br from-[#5C2D14] to-[#3B1C0D] text-white text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {badge}
                 </span>
               )}
