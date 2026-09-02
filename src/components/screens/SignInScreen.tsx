@@ -54,6 +54,7 @@ export const SignInScreen: React.FC = () => {
 
       if (res.success) {
         setSuccessMessage('Google Sign-In successful!');
+        setCurrentScreen('college-select');
       } else {
         setErrorMessage(res.error || 'Google authentication failed.');
       }
@@ -80,6 +81,7 @@ export const SignInScreen: React.FC = () => {
 
     if (res.success) {
       setSuccessMessage('Logged in successfully!');
+      setCurrentScreen('college-select');
     } else {
       setErrorMessage(res.error || 'Failed to log in.');
     }
@@ -106,34 +108,35 @@ export const SignInScreen: React.FC = () => {
 
     if (res.success) {
       setSuccessMessage('Account created successfully!');
+      setCurrentScreen('college-select');
     } else {
       setErrorMessage(res.error || 'Registration failed.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FAF7F5] via-[#FFF5F7] to-[#FAF7F5] text-[#2A050F] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
+    <div className="min-h-screen bg-gradient-to-b from-[#23120B] via-[#1C0D08] to-[#140804] text-amber-50 flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center space-y-3">
         {/* Brand Logo & Badge */}
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-rose-600 text-white shadow-xl shadow-rose-600/30 mb-1">
-          <Cake className="w-9 h-9" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-[#5C2D14] text-[#1A0A04] shadow-xl shadow-amber-500/20 mb-1 font-black">
+          <Cake className="w-9 h-9 text-[#1A0A04]" />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black font-serif text-[#2A050F] tracking-tight">
-          CakeCampus
+        <h1 className="text-3xl sm:text-4xl font-black font-serif text-amber-100 tracking-tight">
+          Cake<span className="text-[#5C2D14]">Campus</span>
         </h1>
-        <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto">
-          Campus Pre-Order Cake Portal • Fresh baking &amp; fixed on-campus pickup
+        <p className="text-xs sm:text-sm text-amber-200/70 max-w-sm mx-auto">
+          Order today, celebrate tomorrow • Fresh baking &amp; fixed on-campus pickup
         </p>
 
         {/* Features banner */}
-        <div className="flex items-center justify-center gap-4 text-[11px] text-zinc-600 font-medium pt-1">
+        <div className="flex items-center justify-center gap-4 text-[11px] text-amber-200/60 font-medium pt-1">
           <span className="flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
             Verified Campus Pickups
           </span>
-          <span className="text-zinc-300">•</span>
+          <span className="text-amber-900">•</span>
           <span className="flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-rose-600" />
+            <Clock className="w-3.5 h-3.5 text-[#7C5542]" />
             Daily 6 PM Cutoff
           </span>
         </div>
@@ -141,28 +144,28 @@ export const SignInScreen: React.FC = () => {
 
       {/* Auth Card */}
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-7 px-6 sm:px-8 shadow-xl shadow-rose-950/5 rounded-3xl border border-[#F3EAE3] space-y-5">
+        <div className="bg-[#23120B] py-7 px-6 sm:px-8 shadow-2xl shadow-black/60 rounded-3xl border border-amber-900/40 space-y-5">
           {/* Header Title */}
           <div className="text-center space-y-1">
-            <h2 className="text-xl font-bold text-[#2A050F] font-serif">
+            <h2 className="text-xl font-bold text-amber-100 font-serif">
               {mode === 'register' ? 'Create Student Account' : 'Sign In to Continue'}
             </h2>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-amber-200/60">
               Sign in with your campus details to choose your college &amp; browse cakes
             </p>
           </div>
 
           {/* Alert Messages */}
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-800 text-emerald-200 text-xs font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>{successMessage}</span>
             </div>
           )}
@@ -172,7 +175,7 @@ export const SignInScreen: React.FC = () => {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full py-3 px-4 rounded-2xl border-2 border-[#E8DED6] hover:border-zinc-400 bg-white hover:bg-zinc-50 text-xs font-bold text-zinc-800 flex items-center justify-center gap-2.5 shadow-2xs transition-all cursor-pointer group"
+            className="w-full py-3 px-4 rounded-2xl border border-[#5C2D14]/30 hover:border-amber-400 bg-[#2D160D] hover:bg-[#381D13] text-xs font-bold text-amber-100 flex items-center justify-center gap-2.5 shadow-sm transition-all cursor-pointer group"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -196,15 +199,15 @@ export const SignInScreen: React.FC = () => {
           </button>
 
           <div className="relative flex py-1 items-center">
-            <div className="grow border-t border-zinc-200"></div>
-            <span className="shrink mx-3 text-[11px] text-zinc-400 font-semibold uppercase tracking-wider">
+            <div className="grow border-t border-amber-900/40"></div>
+            <span className="shrink mx-3 text-[11px] text-amber-300/50 font-semibold uppercase tracking-wider">
               or with password
             </span>
-            <div className="grow border-t border-zinc-200"></div>
+            <div className="grow border-t border-amber-900/40"></div>
           </div>
 
           {/* Mode Switcher Tabs */}
-          <div className="bg-[#FAF7F5] p-1 rounded-xl flex items-center gap-1 text-xs font-bold border border-[#E8DED6]">
+          <div className="bg-[#180A06] p-1 rounded-xl flex items-center gap-1 text-xs font-bold border border-amber-900/40">
             <button
               type="button"
               onClick={() => {
@@ -212,7 +215,7 @@ export const SignInScreen: React.FC = () => {
                 setErrorMessage(null);
               }}
               className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
-                mode === 'login' ? 'bg-white text-rose-600 shadow-xs' : 'text-zinc-500 hover:text-zinc-800'
+                mode === 'login' ? 'bg-[#5C2D14] text-[#1A0A04] font-extrabold shadow-sm' : 'text-amber-200/60 hover:text-amber-100'
               }`}
             >
               Sign In
@@ -224,7 +227,7 @@ export const SignInScreen: React.FC = () => {
                 setErrorMessage(null);
               }}
               className={`flex-1 py-2 rounded-lg transition-all cursor-pointer ${
-                mode === 'register' ? 'bg-white text-rose-600 shadow-xs' : 'text-zinc-500 hover:text-zinc-800'
+                mode === 'register' ? 'bg-[#5C2D14] text-[#1A0A04] font-extrabold shadow-sm' : 'text-amber-200/60 hover:text-amber-100'
               }`}
             >
               Register
@@ -235,31 +238,31 @@ export const SignInScreen: React.FC = () => {
             /* --- EMAIL LOGIN FORM --- */
             <form onSubmit={handleEmailLogin} className="space-y-3.5 animate-fade-in">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-zinc-700">Email Address</label>
+                <label className="text-[11px] font-bold text-amber-200/80">Email Address</label>
                 <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-3.5 h-3.5 text-[#7C5542] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     placeholder="student@college.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-zinc-700">Password</label>
+                <label className="text-[11px] font-bold text-amber-200/80">Password</label>
                 <div className="relative">
-                  <Lock className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-3.5 h-3.5 text-[#7C5542] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                    className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
               </div>
@@ -267,7 +270,7 @@ export const SignInScreen: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                className="w-full py-3 rounded-xl bg-[#5C2D14] hover:bg-amber-400 text-[#1A0A04] font-black text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                 <span>Sign In with Password</span>
@@ -277,74 +280,74 @@ export const SignInScreen: React.FC = () => {
             /* --- REGISTRATION FORM --- */
             <form onSubmit={handleRegister} className="space-y-3 animate-fade-in">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-zinc-700">Full Name</label>
+                <label className="text-[11px] font-bold text-amber-200/80">Full Name</label>
                 <div className="relative">
-                  <User className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <User className="w-3.5 h-3.5 text-[#7C5542] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     placeholder="e.g. Charan Veesam"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                    className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-zinc-700">Student Roll No.</label>
+                  <label className="text-[11px] font-bold text-amber-200/80">Student Roll No.</label>
                   <input
                     type="text"
                     placeholder="21VV1A0589"
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F] uppercase"
+                    className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 uppercase placeholder-amber-300/30"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-zinc-700">Phone</label>
+                  <label className="text-[11px] font-bold text-amber-200/80">Phone</label>
                   <input
                     type="tel"
                     placeholder="9848034567"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                    className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-zinc-700">Email Address</label>
+                <label className="text-[11px] font-bold text-amber-200/80">Email Address</label>
                 <input
                   type="email"
                   placeholder="student@college.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-zinc-700">Password</label>
+                <label className="text-[11px] font-bold text-amber-200/80">Password</label>
                 <input
                   type="password"
                   placeholder="Create password (min 4 chars)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-3 py-2 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
+                  className="w-full px-3 py-2 rounded-xl bg-[#180A06] border border-amber-900/40 focus:border-[#5C2D14] focus:outline-hidden text-xs text-amber-100 placeholder-amber-300/30"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+                className="w-full py-3 rounded-xl bg-[#5C2D14] hover:bg-amber-400 text-[#1A0A04] font-black text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
                 <span>Create Account</span>
@@ -355,7 +358,7 @@ export const SignInScreen: React.FC = () => {
           <div className="text-center pt-2">
             <button
               onClick={() => setCurrentScreen('admin')}
-              className="text-[11px] text-zinc-400 hover:text-zinc-700 transition-colors font-medium cursor-pointer"
+              className="text-[11px] text-amber-300/60 hover:text-amber-200 transition-colors font-medium cursor-pointer"
             >
               Are you an Admin? Go to Admin Portal →
             </button>
@@ -365,3 +368,4 @@ export const SignInScreen: React.FC = () => {
     </div>
   );
 };
+

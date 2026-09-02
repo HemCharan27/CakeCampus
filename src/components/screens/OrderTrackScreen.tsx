@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { 
-  Search, 
   Clock, 
   MapPin, 
   CheckCircle2, 
@@ -12,26 +11,15 @@ import {
   PartyPopper,
   XCircle,
   CreditCard,
-  Cake
+  Cake,
+  ArrowLeft,
+  ArrowRight,
+  User,
+  ShoppingBag,
+  RefreshCw,
+  ChevronRight
 } from 'lucide-react';
-import { CanonicalOrderStatus } from '../../types';
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
-
-interface TrackedOrderData {
-  orderId: string;
-  customerName: string;
-  rollNumber: string;
-  pickupDate: string;
-  pickupPoint: string;
-  cakeMessage?: string;
-  status: CanonicalOrderStatus;
-  items: any[];
-  itemsTotal: number;
-  deliveryCharge: number;
-  totalAmount: number;
-  createdAt: string;
-}
+import { CanonicalOrderStatus, OrderData } from '../../types';
 
 const STATUS_STEPS: { key: CanonicalOrderStatus; label: string; desc: string; icon: any }[] = [
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', desc: 'Waiting for UPI payment & UTR submission', icon: CreditCard },
@@ -44,101 +32,131 @@ const STATUS_STEPS: { key: CanonicalOrderStatus; label: string; desc: string; ic
 
 export const OrderTrackScreen: React.FC = () => {
   const { 
-    trackingOrderId, 
-    setTrackingOrderId, 
-    trackingPhoneOrEmail, 
-    setTrackingPhoneOrEmail, 
     setCurrentScreen,
     customerUser,
-    customerOrders
+    customerOrders,
+    fetchCustomerOrders,
+    setIsAuthModalOpen,
+    setAuthModalMode,
+    trackingOrderId
   } = useApp();
 
-  const [orderIdInput, setOrderIdInput] = useState(trackingOrderId || '');
-  const [phoneOrEmailInput, setPhoneOrEmailInput] = useState(trackingPhoneOrEmail || customerUser?.email || customerUser?.phone || '');
-
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [trackedOrder, setTrackedOrder] = useState<TrackedOrderData | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(trackingOrderId || null);
 
-  const fetchTrackOrder = async (orderId: string, phoneOrEmail: string) => {
-    if (!orderId.trim() || !phoneOrEmail.trim()) {
-      setErrorMessage('Please enter both your Order ID and registered Phone number / Email.');
-      return;
-    }
-
-    setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/orders/track?orderId=${encodeURIComponent(orderId.trim())}&phone=${encodeURIComponent(phoneOrEmail.trim())}`
-      );
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'No matching order found.');
-      }
-
-      setTrackedOrder(data.order);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to retrieve order tracking info.');
-      setTrackedOrder(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Fetch fresh orders on component mount
   useEffect(() => {
-    if (trackingOrderId && trackingPhoneOrEmail) {
-      setOrderIdInput(trackingOrderId);
-      setPhoneOrEmailInput(trackingPhoneOrEmail);
-      fetchTrackOrder(trackingOrderId, trackingPhoneOrEmail);
+    if (customerUser) {
+      setIsLoading(true);
+      fetchCustomerOrders().finally(() => setIsLoading(false));
     }
-  }, [trackingOrderId, trackingPhoneOrEmail]);
+  }, [customerUser?.id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchTrackOrder(orderIdInput, phoneOrEmailInput);
-  };
-
-  const handleQuickTrack = (orderId: string, emailOrPhone: string) => {
-    setOrderIdInput(orderId);
-    setPhoneOrEmailInput(emailOrPhone);
-    fetchTrackOrder(orderId, emailOrPhone);
-  };
+  // Default to selecting trackingOrderId or the first order if none selected
+  useEffect(() => {
+    if (trackingOrderId) {
+      setSelectedOrderId(trackingOrderId);
+    } else if (!selectedOrderId && customerOrders.length > 0) {
+      setSelectedOrderId(customerOrders[0].orderId);
+    }
+  }, [customerOrders, trackingOrderId]);
 
   const getStepIndex = (status: CanonicalOrderStatus): number => {
     if (status === 'CANCELLED') return -1;
     return STATUS_STEPS.findIndex(s => s.key === status);
   };
 
-  const currentStepIdx = trackedOrder ? getStepIndex(trackedOrder.status) : 0;
+  // Selected Order Object
+  const activeOrder: OrderData | undefined = customerOrders.find(o => o.orderId === selectedOrderId) || customerOrders[0];
+  const currentStepIdx = activeOrder ? getStepIndex(activeOrder.status) : 0;
+
+  // 1. Not Logged In State
+  if (!customerUser) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-[#23120B] border border-[#5C2D14]/30 text-[#7C5542] flex items-center justify-center mx-auto shadow-md">
+          <User className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-[#1A0A04] font-serif">Sign In to View Orders</h1>
+          <p className="text-xs sm:text-sm text-[#7C5542] max-w-sm mx-auto">
+            Please sign in with your student account to view your past and active cake pre-orders history.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setAuthModalMode('login');
+            setIsAuthModalOpen(true);
+          }}
+          className="px-6 py-3.5 rounded-xl bg-gradient-to-r -white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+        >
+          <User className="w-4 h-4" />
+          <span>Sign In / Register</span>
+        </button>
+      </div>
+    );
+  }
+
+  // 2. Logged In But No Orders State
+  if (!isLoading && customerOrders.length === 0) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-[#23120B] border border-[#5C2D14]/30 text-[#7C5542] flex items-center justify-center mx-auto shadow-md">
+          <PackageCheck className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-[#1A0A04] font-serif">No Pre-Orders Yet</h1>
+          <p className="text-xs sm:text-sm text-[#7C5542] max-w-sm mx-auto">
+            You haven't placed any cake pre-orders yet with your account ({customerUser.email}).
+          </p>
+        </div>
+        <button
+          onClick={() => setCurrentScreen('catalog')}
+          className="px-6 py-3.5 rounded-xl bg-gradient-to-r -white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+        >
+          <Cake className="w-4 h-4" />
+          <span>Browse Bakery Menu</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 pb-32 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-32 space-y-6">
       {/* Header */}
-      <div className="text-center space-y-1.5 max-w-md mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-black text-[#2A050F] font-serif">
-          Track Your Pre-Order
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-500">
-          Enter your Order ID (e.g. CC-123456) and registered phone number or email
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#5C2D14]/15 pb-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-[#1A0A04] font-serif">
+            My Order History
+          </h1>
+          <p className="text-xs sm:text-sm text-[#7C5542]">
+            Account: <strong>{customerUser.name}</strong> ({customerUser.email}) • {customerOrders.length} order{customerOrders.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            setIsLoading(true);
+            fetchCustomerOrders().finally(() => setIsLoading(false));
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#23120B] border border-[#5C2D14]/30 text-xs font-bold text-[#7C5542] hover:bg-[#2D160D] transition-colors cursor-pointer self-start sm:self-auto"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          <span>Refresh History</span>
+        </button>
       </div>
 
-      {/* Customer Quick Order Selector if logged in */}
-      {customerUser && customerOrders.length > 0 && !trackedOrder && (
-        <div className="bg-white p-5 rounded-3xl border border-[#F3EAE3] shadow-xs space-y-3 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide flex items-center gap-1.5">
-              <PackageCheck className="w-4 h-4 text-rose-600" />
-              <span>Your Recent Orders</span>
-            </h2>
-            <span className="text-[11px] text-zinc-400 font-semibold">{customerOrders.length} pre-orders</span>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Left Column: List of All Customer Orders */}
+        <div className="lg:col-span-1 space-y-3">
+          <h2 className="text-xs font-bold text-[#1A0A04] uppercase tracking-wide flex items-center justify-between">
+            <span>All Account Orders</span>
+            <span className="text-[11px] text-[#7C5542] font-semibold">{customerOrders.length}</span>
+          </h2>
 
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-            {customerOrders.map(order => {
+          <div className="space-y-2.5 max-h-[600px] overflow-y-auto pr-1">
+            {customerOrders.map((order) => {
+              const isSelected = activeOrder?.orderId === order.orderId;
               const pickupDateStr = typeof order.pickupDate === 'string'
                 ? order.pickupDate.split('T')[0]
                 : new Date(order.pickupDate).toISOString().split('T')[0];
@@ -146,218 +164,175 @@ export const OrderTrackScreen: React.FC = () => {
               return (
                 <div
                   key={order.orderId}
-                  onClick={() => handleQuickTrack(order.orderId, customerUser.email)}
-                  className="p-3 rounded-2xl bg-[#FAF7F5] hover:bg-rose-50/60 border border-[#E8DED6] hover:border-rose-300 flex items-center justify-between transition-all cursor-pointer group"
+                  onClick={() => setSelectedOrderId(order.orderId)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2 ${
+                    isSelected
+                      ? 'bg-[#FFF8EE] border-[#5C2D14] ring-2 ring-[#5C2D14]/20 shadow-md'
+                      : 'bg-[#FFF8EE]/60 hover:bg-[#FFF8EE] border-[#5C2D14]/20 hover:border-[#5C2D14]/40'
+                  }`}
                 >
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-rose-600">{order.orderId}</span>
-                      <span className="text-[10px] bg-white text-zinc-700 font-semibold px-2 py-0.5 rounded border border-zinc-200">
-                        {order.status.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500">
-                      Pickup: <strong>{pickupDateStr}</strong> • ₹{order.totalAmount}
-                    </p>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-xs text-[#5C2D14]">
+                      {order.orderId}
+                    </span>
+                    <span className="text-[10px] bg-[#23120B] text-[#7C5542] font-bold px-2 py-0.5 rounded-full border border-[#5C2D14]/30">
+                      {order.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
 
-                  <span className="text-xs font-bold text-rose-600 group-hover:underline">
-                    Track ↗
-                  </span>
+                  <div className="text-xs space-y-0.5">
+                    <p className="text-[#1A0A04] font-bold line-clamp-1">
+                      {order.items.map(i => `${i.qty}x ${i.cakeNameSnapshot}`).join(', ')}
+                    </p>
+                    <div className="flex items-center justify-between text-[11px] text-[#7C5542] pt-1">
+                      <span>Pickup: {pickupDateStr}</span>
+                      <span className="font-bold text-[#1A0A04]">₹{order.totalAmount}</span>
+                    </div>
+                  </div>
                 </div>
               );
             })}
           </div>
         </div>
-      )}
 
-      {/* Lookup Form */}
-      <form onSubmit={handleSubmit} className="bg-white p-5 rounded-3xl border border-[#F3EAE3] shadow-xs space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-700">Order ID</label>
-            <input
-              type="text"
-              placeholder="e.g. CC-100234"
-              value={orderIdInput}
-              onChange={(e) => setOrderIdInput(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs font-mono uppercase text-[#2A050F]"
-              required
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-zinc-700">Phone Number or Email</label>
-            <input
-              type="text"
-              placeholder="e.g. 9848034567 or student@edu"
-              value={phoneOrEmailInput}
-              onChange={(e) => setPhoneOrEmailInput(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF7F5] border border-[#E8DED6] focus:border-rose-500 focus:outline-hidden text-xs text-[#2A050F]"
-              required
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-bold text-xs shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Checking Order Status...</span>
-            </>
-          ) : (
-            <>
-              <Search className="w-4 h-4" />
-              <span>Track Order</span>
-            </>
-          )}
-        </button>
-      </form>
-
-      {/* Error Message */}
-      {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-center gap-2.5 shadow-xs">
-          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      {/* Tracked Order Details */}
-      {trackedOrder && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Order Header Card */}
-          <div className="bg-white p-6 rounded-3xl border border-[#F3EAE3] shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-4">
-              <div>
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Order ID</span>
-                <span className="text-lg font-black text-rose-600 font-mono tracking-wide">
-                  {trackedOrder.orderId}
-                </span>
-              </div>
-              <div className="text-left sm:text-right">
-                <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Student</span>
-                <span className="text-xs font-bold text-zinc-800">
-                  {trackedOrder.customerName} ({trackedOrder.rollNumber})
-                </span>
-              </div>
-            </div>
-
-            {/* Status Timeline */}
-            {trackedOrder.status === 'CANCELLED' ? (
-              <div className="bg-rose-50 border border-rose-200 p-4 rounded-2xl flex items-center gap-3 text-rose-900">
-                <XCircle className="w-6 h-6 text-rose-600 shrink-0" />
+        {/* Right Column: Detailed View of Selected Order */}
+        {activeOrder ? (
+          <div className="lg:col-span-2 space-y-6 animate-fade-in">
+            {/* Header Card */}
+            <div className="bg-[#FFF8EE] p-6 rounded-3xl border border-[#5C2D14]/20 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#5C2D14]/15 pb-4">
                 <div>
-                  <h3 className="font-bold text-sm">Order Cancelled</h3>
-                  <p className="text-xs text-rose-800">This order has been cancelled by administration.</p>
+                  <span className="text-[10px] text-[#7C5542]/70 font-bold uppercase tracking-wider block">Order Reference</span>
+                  <span className="text-xl font-black text-[#5C2D14] font-mono tracking-wide">
+                    {activeOrder.orderId}
+                  </span>
+                </div>
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] text-[#7C5542]/70 font-bold uppercase tracking-wider block">Student Details</span>
+                  <span className="text-xs font-bold text-[#1A0A04]">
+                    {activeOrder.customer.name} ({activeOrder.customer.rollNumber})
+                  </span>
                 </div>
               </div>
-            ) : (
-              <div className="py-2 space-y-4">
-                <div className="relative flex items-center justify-between">
-                  {/* Progress Line */}
-                  <div className="absolute top-1/2 left-4 right-4 -translate-y-1/2 h-1 bg-zinc-200 -z-0">
-                    <div 
-                      className="h-full bg-rose-600 transition-all duration-500"
-                      style={{ width: `${Math.max(0, (currentStepIdx / (STATUS_STEPS.length - 1)) * 100)}%` }}
-                    />
-                  </div>
 
-                  {STATUS_STEPS.map((step, idx) => {
-                    const isDone = currentStepIdx >= idx;
-                    const isCurrent = currentStepIdx === idx;
-                    const Icon = step.icon;
-
-                    return (
-                      <div key={step.key} className="relative z-10 flex flex-col items-center group">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                          isDone 
-                            ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30' 
-                            : 'bg-white border-2 border-zinc-300 text-zinc-400'
-                        } ${isCurrent ? 'ring-4 ring-rose-100 scale-110' : ''}`}>
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <span className={`text-[10px] mt-1.5 font-bold text-center max-w-[60px] sm:max-w-none ${
-                          isCurrent ? 'text-rose-600' : isDone ? 'text-zinc-800' : 'text-zinc-400'
-                        }`}>
-                          {step.label}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <div className="bg-[#FAF7F5] p-3.5 rounded-xl border border-[#E8DED6] text-xs text-zinc-600 text-center">
-                  Current Status: <strong className="text-rose-600">{STATUS_STEPS[currentStepIdx]?.label || trackedOrder.status}</strong>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">{STATUS_STEPS[currentStepIdx]?.desc}</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Pickup Details & Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-[#F3EAE3] shadow-xs space-y-2.5">
-              <h3 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-rose-600" />
-                <span>Pickup Details</span>
-              </h3>
-              <div className="text-xs space-y-1">
-                <p><strong>Point:</strong> {trackedOrder.pickupPoint}</p>
-                <p><strong>Date:</strong> {typeof trackedOrder.pickupDate === 'string' ? trackedOrder.pickupDate.split('T')[0] : ''}</p>
-                {trackedOrder.cakeMessage && (
-                  <p><strong>Cake Message:</strong> <em>"{trackedOrder.cakeMessage}"</em></p>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-[#F3EAE3] shadow-xs space-y-2.5">
-              <h3 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide">
-                Payment & Total
-              </h3>
-              <div className="text-xs space-y-1">
-                <div className="flex justify-between text-zinc-600">
-                  <span>Items Total:</span>
-                  <span>₹{trackedOrder.itemsTotal}</span>
-                </div>
-                <div className="flex justify-between text-zinc-600">
-                  <span>Delivery Charge:</span>
-                  <span>₹{trackedOrder.deliveryCharge}</span>
-                </div>
-                <div className="flex justify-between font-bold text-sm text-[#2A050F] pt-1 border-t border-zinc-100">
-                  <span>Grand Total:</span>
-                  <span className="text-rose-600 font-black">₹{trackedOrder.totalAmount}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Items Breakdown */}
-          <div className="bg-white p-5 rounded-2xl border border-[#F3EAE3] shadow-xs space-y-3">
-            <h3 className="text-xs font-bold text-[#2A050F] uppercase tracking-wide">
-              Items in Order
-            </h3>
-            <div className="divide-y divide-zinc-100 text-xs">
-              {trackedOrder.items.map((item, idx) => (
-                <div key={idx} className="py-2.5 flex justify-between">
+              {/* Status Timeline */}
+              {activeOrder.status === 'CANCELLED' ? (
+                <div className="bg-[#5C2D14]/10 border border-[#5C2D14]/25 p-4 rounded-2xl flex items-center gap-3 text-[#1A0A04]">
+                  <XCircle className="w-6 h-6 text-[#5C2D14] shrink-0" />
                   <div>
-                    <span className="font-bold text-[#2A050F]">{item.qty}x {item.cakeNameSnapshot}</span>
-                    <span className="block text-[11px] text-zinc-500">
-                      {item.weightKey} • {item.flavourKey}
-                      {item.toppingKeys?.length ? ` • Toppings: ${item.toppingKeys.join(', ')}` : ''}
-                      {item.addOnKeys?.length ? ` • Add-ons: ${item.addOnKeys.join(', ')}` : ''}
-                    </span>
+                    <h3 className="font-bold text-sm">Order Cancelled</h3>
+                    <p className="text-xs text-[#7C5542]">This pre-order was cancelled by administration.</p>
                   </div>
-                  <span className="font-bold text-zinc-800">₹{item.lineTotal}</span>
                 </div>
-              ))}
+              ) : (
+                <div className="py-2 space-y-4">
+                  <div className="relative flex items-center justify-between">
+                    {/* Progress Line */}
+                    <div className="absolute top-1/2 left-4 right-4 -translate-y-1/2 h-1 bg-[#5C2D14]/15 -z-0">
+                      <div 
+                        className="h-full bg-[#5C2D14] transition-all duration-500"
+                        style={{ width: `${Math.max(0, (currentStepIdx / (STATUS_STEPS.length - 1)) * 100)}%` }}
+                      />
+                    </div>
+
+                    {STATUS_STEPS.map((step, idx) => {
+                      const isDone = currentStepIdx >= idx;
+                      const isCurrent = currentStepIdx === idx;
+                      const Icon = step.icon;
+
+                      return (
+                        <div key={step.key} className="relative z-10 flex flex-col items-center group">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isDone 
+                              ? 'bg-[#5C2D14] text-[#1A0A04] shadow-md shadow-[#5C2D14]/30' 
+                              : 'bg-[#FFF8EE] border-2 border-[#5C2D14]/25 text-[#7C5542]/70'
+                          } ${isCurrent ? 'ring-4 ring-[#5C2D14]/20 scale-110' : ''}`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <span className={`text-[10px] mt-1.5 font-bold text-center max-w-[60px] sm:max-w-none ${
+                            isCurrent ? 'text-[#5C2D14]' : isDone ? 'text-[#1A0A04]' : 'text-[#7C5542]/70'
+                          }`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="bg-[#F5EDE4] p-3.5 rounded-xl border border-[#5C2D14]/20 text-xs text-[#7C5542] text-center">
+                    Current Status: <strong className="text-[#5C2D14]">{STATUS_STEPS[currentStepIdx]?.label || activeOrder.status}</strong>
+                    <p className="text-[11px] text-[#7C5542] mt-0.5">{STATUS_STEPS[currentStepIdx]?.desc}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Pickup Details & Payment */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-[#FFF8EE] p-5 rounded-2xl border border-[#5C2D14]/20 shadow-sm space-y-2.5">
+                <h3 className="text-xs font-bold text-[#1A0A04] uppercase tracking-wide flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-[#5C2D14]" />
+                  <span>Pickup Details</span>
+                </h3>
+                <div className="text-xs space-y-1.5 text-[#7C5542]">
+                  <p><strong>Point:</strong> <span className="text-[#1A0A04] font-bold">{activeOrder.pickupPoint}</span></p>
+                  <p><strong>Scheduled Date:</strong> <span className="text-[#1A0A04] font-bold">{typeof activeOrder.pickupDate === 'string' ? activeOrder.pickupDate.split('T')[0] : ''}</span></p>
+                  {activeOrder.cakeMessage && (
+                    <p><strong>Cake Message:</strong> <em>"{activeOrder.cakeMessage}"</em></p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-[#FFF8EE] p-5 rounded-2xl border border-[#5C2D14]/20 shadow-sm space-y-2.5">
+                <h3 className="text-xs font-bold text-[#1A0A04] uppercase tracking-wide">
+                  Payment Summary
+                </h3>
+                <div className="text-xs space-y-1 text-[#7C5542]">
+                  <div className="flex justify-between">
+                    <span>Items Total:</span>
+                    <span>₹{activeOrder.itemsTotal}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Campus Delivery Charge:</span>
+                    <span>₹{activeOrder.deliveryCharge}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-sm text-[#1A0A04] pt-1.5 border-t border-[#5C2D14]/15">
+                    <span>Grand Total:</span>
+                    <span className="text-[#5C2D14] font-black">₹{activeOrder.totalAmount}</span>
+                  </div>
+                  {activeOrder.payment?.utr && (
+                    <p className="text-[11px] text-[#7C5542] pt-1 font-mono">
+                      UTR: {activeOrder.payment.utr}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Items Breakdown */}
+            <div className="bg-[#FFF8EE] p-5 rounded-2xl border border-[#5C2D14]/20 shadow-sm space-y-3">
+              <h3 className="text-xs font-bold text-[#1A0A04] uppercase tracking-wide">
+                Items Included in Order
+              </h3>
+              <div className="divide-y divide-[#5C2D14]/15 text-xs">
+                {activeOrder.items.map((item, idx) => (
+                  <div key={idx} className="py-2.5 flex justify-between items-start">
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-[#1A0A04]">{item.qty}x {item.cakeNameSnapshot}</p>
+                      <p className="text-[11px] text-[#7C5542]">
+                        {item.weightKey} • {item.flavourKey}
+                        {item.toppingKeys?.length ? ` • Toppings: ${item.toppingKeys.join(', ')}` : ''}
+                        {item.addOnKeys?.length ? ` • Add-ons: ${item.addOnKeys.join(', ')}` : ''}
+                      </p>
+                    </div>
+                    <span className="font-bold text-[#1A0A04]">₹{item.lineTotal}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
     </div>
   );
 };

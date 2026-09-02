@@ -155,4 +155,6 @@ export type ScreenType =
   | 'checkout'
   | 'success'
   | 'track'
+  | 'about'
+  | 'contact'
   | 'admin';

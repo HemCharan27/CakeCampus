@@ -37,6 +37,7 @@ import {
 } from './src/server/models';
 import { checkPickupCutoff, validateAndCalculateOrder } from './src/server/pricingAndCutoff';
 import { createNotionOrderRow, updateNotionOrderStatus } from './src/server/notionService';
+import { appendToGoogleSheet } from './src/server/googleSheetsService';
 import { sendPaymentConfirmationEmails, sendOrderCreatedEmail } from './src/server/emailService';
 import { OrderDocument, OrderStatus, AdminDocument, CustomerUserDocument } from './src/server/types';
 
@@ -746,6 +747,9 @@ app.post('/api/orders', rateLimit(60_000, 5), async (req, res) => {
         }).catch(err => console.error('Error saving Notion pageId to order:', err));
       }
     }).catch(err => console.error('Notion async mirror error:', err));
+
+    // Mirror to Google Sheets in background
+    appendToGoogleSheet(savedOrder);
 
     // Send "order created — please pay" email
     sendOrderCreatedEmail(savedOrder).catch(err =>
