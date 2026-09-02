@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { Clock, Sparkles, ArrowRight, ChevronRight, Cake } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -56,7 +56,7 @@ export const HomeScreen: React.FC = () => {
             <div className="pt-1 w-full sm:w-auto">
               <button
                 onClick={() => setCurrentScreen('catalog')}
-                className="w-full sm:w-auto px-9 py-4 rounded-xl bg-gradient-to-r -white font-extrabold text-base shadow-xl shadow-[#5C2D14]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 group cursor-pointer border border-[#7C5542]/60"
+                className="w-full sm:w-auto px-9 py-4 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-extrabold text-base shadow-xl shadow-[#5C2D14]/30 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-3 group cursor-pointer border border-[#7C5542]/60"
               >
                 <Cake className="w-5 h-5" />
                 <span>Explore Bakery Menu</span>
@@ -104,19 +104,19 @@ export const HomeScreen: React.FC = () => {
               </div>
               <div className="absolute bottom-4 left-4 right-4 bg-[#1A0A04]/90 backdrop-blur-md p-3.5 rounded-2xl border border-[#5C2D14]/30 shadow-xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#5C2D14]/20 text-[#7C5542] flex items-center justify-center text-lg border border-[#5C2D14]/30">🎂</div>
+                  <div className="w-10 h-10 rounded-xl bg-[#5C2D14]/20 text-[#7C5542] flex items-center justify-center text-lg border border-[#5C2D14]/30">??</div>
                   <div>
                     <h4 className="text-xs font-bold text-amber-100">Handcrafted Daily</h4>
                     <p className="text-[11px] text-[#5C2D14]/80">Pure Chocolate Ganache &amp; Cream</p>
                   </div>
                 </div>
-                <span className="text-[11px] font-extrabold bg-gradient-to-r -white px-2.5 py-1 rounded-lg shadow-md">Fresh 100%</span>
+                <span className="text-[11px] font-extrabold bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white px-2.5 py-1 rounded-lg shadow-md">Fresh 100%</span>
               </div>
             </div>
-            <div className="absolute -top-3 -right-3 w-14 h-14 rounded-full bg-gradient-to-br -white flex flex-col items-center justify-center shadow-lg border-2 border-[#7C5542]/60 text-center">
+            <div className="absolute -top-3 -right-3 w-14 h-14 rounded-full bg-gradient-to-br from-[#5C2D14] to-[#3B1C0D] text-white flex flex-col items-center justify-center shadow-lg border-2 border-[#7C5542]/60 text-center">
               <span className="text-[8px] font-black leading-none">SLOW</span>
               <span className="text-[8px] font-black leading-none">MO</span>
-              <span className="text-[9px] leading-none mt-0.5">🎬</span>
+              <span className="text-[9px] leading-none mt-0.5">??</span>
             </div>
           </motion.div>
         </div>
@@ -127,7 +127,7 @@ export const HomeScreen: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-xl sm:text-3xl font-black text-[#1A0A04] font-serif tracking-tight">
-              Campus Favorites <span className="text-brown-gradient">✨</span>
+              Campus Favorites <span className="text-brown-gradient">?</span>
             </h2>
             <p className="text-xs sm:text-sm text-[#7C5542]">Handcrafted artisanal cakes &amp; fresh bakery biscuits</p>
           </div>
@@ -159,7 +159,7 @@ export const HomeScreen: React.FC = () => {
                       {item.category}
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 bg-gradient-to-r -white text-xs font-black px-3 py-1 rounded-full shadow-md">
+                  <span className="absolute bottom-3 right-3 bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
                     From &#8377;{minPrice} ({minWeightKey})
                   </span>
                 </div>
@@ -193,7 +193,7 @@ export const HomeScreen: React.FC = () => {
               { n: '3', title: 'Pick Up on Campus', desc: 'Show your Order ID at CakeCampus Point on your chosen date to collect your box!' },
             ].map(s => (
               <div key={s.n} className="bg-[#2D160D]/80 p-6 rounded-2xl border border-[#5C2D14]/20 shadow-md space-y-2.5 hover:border-[#5C2D14]/50 transition-colors">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br -white font-black flex items-center justify-center text-sm shadow-md">{s.n}</div>
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#5C2D14] to-[#3B1C0D] text-white font-black flex items-center justify-center text-sm shadow-md">{s.n}</div>
                 <h3 className="font-bold text-sm text-amber-100">{s.title}</h3>
                 <p className="text-xs text-amber-200/60 leading-relaxed">{s.desc}</p>
               </div>

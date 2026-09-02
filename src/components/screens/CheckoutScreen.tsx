@@ -38,6 +38,45 @@ export const CheckoutScreen: React.FC = () => {
   const [step, setStep] = useState<'details' | 'payment'>('details');
   const [createdOrder, setCreatedOrder] = useState<any>(null);
 
+  const calculateEarliestPickupDate = () => {
+    const nowIST = DateTime.now().setZone(IST_ZONE);
+    const daysToAdd = nowIST.hour >= 18 ? 2 : 1;
+    return nowIST.plus({ days: daysToAdd }).toFormat('yyyy-MM-dd');
+  };
+
+  const earliestDateStr = calculateEarliestPickupDate();
+
+  const [name, setName] = useState(customerUser?.name || '');
+  const [phone, setPhone] = useState(customerUser?.phone || '');
+  const [email, setEmail] = useState(customerUser?.email || '');
+  const [rollNumber, setRollNumber] = useState(customerUser?.rollNumber || '');
+  const [cakeMessage, setCakeMessage] = useState('');
+  const [pickupDate, setPickupDate] = useState(earliestDateStr);
+  const [upiUtr, setUpiUtr] = useState('');
+  const [copiedUpi, setCopiedUpi] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
+  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serverConfig, setServerConfig] = useState<any>(null);
+
+  useEffect(() => {
+    if (customerUser) {
+      if (customerUser.name && !name) setName(customerUser.name);
+      if (customerUser.email && !email) setEmail(customerUser.email);
+      if (customerUser.phone && !phone) setPhone(customerUser.phone);
+      if (customerUser.rollNumber && !rollNumber) setRollNumber(customerUser.rollNumber);
+    }
+  }, [customerUser]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/config`)
+      .then(res => res.json())
+      .then(data => setServerConfig(data))
+      .catch(err => console.warn('Failed to load server config:', err));
+  }, []);
+
   if (cart.length === 0 && step === 'details') {
     return (
       <div className="max-w-xl mx-auto px-4 py-20 text-center space-y-4">
@@ -51,52 +90,6 @@ export const CheckoutScreen: React.FC = () => {
       </div>
     );
   }
-
-  // Calculate earliest valid pickup date in IST based on the 6:00 PM cutoff rule
-  const calculateEarliestPickupDate = () => {
-    const nowIST = DateTime.now().setZone(IST_ZONE);
-    const daysToAdd = nowIST.hour >= 18 ? 2 : 1;
-    return nowIST.plus({ days: daysToAdd }).toFormat('yyyy-MM-dd');
-  };
-
-  const earliestDateStr = calculateEarliestPickupDate();
-
-  // Form states with auto-fill from logged-in customer profile
-  const [name, setName] = useState(customerUser?.name || '');
-  const [phone, setPhone] = useState(customerUser?.phone || '');
-  const [email, setEmail] = useState(customerUser?.email || '');
-  const [rollNumber, setRollNumber] = useState(customerUser?.rollNumber || '');
-  const [cakeMessage, setCakeMessage] = useState('');
-  const [pickupDate, setPickupDate] = useState(earliestDateStr);
-  
-  // Payment states
-  const [upiUtr, setUpiUtr] = useState('');
-  const [copiedUpi, setCopiedUpi] = useState(false);
-  const [copiedAmount, setCopiedAmount] = useState(false);
-  const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
-  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
-
-  // Auto-fill when customerUser loads or signs in
-  useEffect(() => {
-    if (customerUser) {
-      if (customerUser.name && !name) setName(customerUser.name);
-      if (customerUser.email && !email) setEmail(customerUser.email);
-      if (customerUser.phone && !phone) setPhone(customerUser.phone);
-      if (customerUser.rollNumber && !rollNumber) setRollNumber(customerUser.rollNumber);
-    }
-  }, [customerUser]);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [serverConfig, setServerConfig] = useState<any>(null);
-
-  // Load server config
-  useEffect(() => {
-    fetch(`${API_BASE}/api/config`)
-      .then(res => res.json())
-      .then(data => setServerConfig(data))
-      .catch(err => console.warn('Failed to load server config:', err));
-  }, []);
 
   const localDeliveryCharge = serverConfig?.deliveryCharge ?? 50;
   const localGrandTotal = itemsTotal + localDeliveryCharge;
@@ -441,6 +434,8 @@ export const CheckoutScreen: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    maxLength={100}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>\{}]/g, '') }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -455,6 +450,8 @@ export const CheckoutScreen: React.FC = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     required
+                    maxLength={10}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '') }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -469,6 +466,7 @@ export const CheckoutScreen: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    maxLength={254}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -483,6 +481,8 @@ export const CheckoutScreen: React.FC = () => {
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
                     required
+                    maxLength={30}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.toUpperCase().replace(/[^A-Z0-9\-\/]/g, '') }}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04] uppercase"
                   />
                 </div>
@@ -499,6 +499,7 @@ export const CheckoutScreen: React.FC = () => {
                   value={cakeMessage}
                   onChange={(e) => setCakeMessage(e.target.value)}
                   maxLength={45}
+                  onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>\{}]/g, '') }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                 />
                 <span className="text-[10px] text-[#7C5542]/70 block text-right">Max 45 chars</span>
@@ -648,6 +649,8 @@ export const CheckoutScreen: React.FC = () => {
                   value={upiUtr}
                   onChange={(e) => setUpiUtr(e.target.value)}
                   minLength={8}
+                  maxLength={30}
+                  onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[^A-Za-z0-9]/g, '') }}
                   required
                   className="w-full px-4 py-3 rounded-xl bg-[#FFF8EE] border-2 border-[#5C2D14]/25 focus:border-[#5C2D14] focus:outline-hidden font-mono text-sm text-[#1A0A04] font-bold tracking-wider"
                 />

@@ -253,6 +253,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      maxLength={254}
                       className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                     />
                   </div>
@@ -268,6 +269,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      minLength={4}
+                      maxLength={128}
                       className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                     />
                   </div>
@@ -295,6 +298,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
+                      maxLength={100}
+                      onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>\{}]/g, '') }}
                       className="w-full pl-8 pr-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                     />
                   </div>
@@ -309,6 +314,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       value={rollNumber}
                       onChange={(e) => setRollNumber(e.target.value)}
                       required
+                      maxLength={30}
+                      onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.toUpperCase().replace(/[^A-Z0-9\-\/]/g, '') }}
                       className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04] uppercase"
                     />
                   </div>
@@ -321,6 +328,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       required
+                      maxLength={10}
+                      onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '') }}
                       className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                     />
                   </div>
@@ -334,6 +343,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
+                    maxLength={254}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -346,6 +356,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, initialMo
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    minLength={4}
+                    maxLength={128}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>

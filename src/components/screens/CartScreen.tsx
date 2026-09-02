@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ArrowLeft, MapPin, Clock, ShieldCheck } from 'lucide-react';
 
@@ -15,7 +15,7 @@ export const CartScreen: React.FC = () => {
           <h2 className="text-xl font-bold text-[#1A0A04] font-serif">Your Cart is Empty</h2>
           <p className="text-xs text-[#7C5542] max-w-sm mx-auto">Choose your favorite cake from our campus catalog and customize size, flavours &amp; toppings.</p>
         </div>
-        <button onClick={() => setCurrentScreen('catalog')} className="px-6 py-3 rounded-xl bg-gradient-to-r -white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer">
+        <button onClick={() => setCurrentScreen('catalog')} className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer">
           <span>Browse Cake Menu</span><ArrowRight className="w-4 h-4" />
         </button>
       </div>
@@ -102,7 +102,7 @@ export const CartScreen: React.FC = () => {
           </div>
           <button
             onClick={() => setCurrentScreen('checkout')}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r -white font-black text-sm shadow-lg shadow-[#5C2D14]/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-[#7C5542]/40"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-black text-sm shadow-lg shadow-[#5C2D14]/25 transition-all flex items-center justify-center gap-2 cursor-pointer border border-[#7C5542]/40"
           >
             <span>Proceed to Checkout</span><ArrowRight className="w-4 h-4" />
           </button>

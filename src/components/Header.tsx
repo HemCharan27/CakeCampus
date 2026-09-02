@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { ShoppingBag, Clock, MapPin, Cake, User, LogOut, PackageCheck, ChevronDown, Info, MessageSquare, Shield } from 'lucide-react';
+import { ScreenType } from '../types';
 
 export const Header: React.FC = () => {
   const { currentScreen, setCurrentScreen, cart, customerUser, selectedCollege, logoutCustomer, setIsAuthModalOpen, setAuthModalMode, customerOrders } = useApp();
@@ -21,7 +22,7 @@ export const Header: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <button onClick={() => setCurrentScreen('home')} className="flex items-center gap-2.5 text-left focus:outline-none group cursor-pointer">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr -white shadow-lg shadow-[#5C2D14]/25 group-hover:scale-105 transition-transform font-bold">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#5C2D14] to-[#3B1C0D] text-white shadow-lg shadow-[#5C2D14]/25 group-hover:scale-105 transition-transform font-bold">
             <Cake className="w-5 h-5" />
           </div>
           <div>
@@ -58,7 +59,7 @@ export const Header: React.FC = () => {
               onClick={() => setCurrentScreen(s as any)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 (currentScreen === s || (s === 'catalog' && currentScreen === 'cake-detail'))
-                  ? 'bg-gradient-to-r -white font-bold shadow-sm'
+                  ? 'bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-bold shadow-sm'
                   : 'text-amber-200/70 hover:text-amber-100'
               }`}
             >{label}</button>
@@ -85,7 +86,7 @@ export const Header: React.FC = () => {
                 {customerUser.avatarUrl ? (
                   <img src={customerUser.avatarUrl} alt={customerUser.name} className="w-7 h-7 rounded-full object-cover border border-[#5C2D14]" />
                 ) : (
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br -white font-black text-xs flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#5C2D14] to-[#3B1C0D] text-white font-black text-xs flex items-center justify-center">
                     {customerUser.name.charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -138,7 +139,7 @@ export const Header: React.FC = () => {
           {/* Cart */}
           <button
             onClick={() => setCurrentScreen('cart')}
-            className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r -white hover:from-[#3B1C0D] hover:to-[#5C2D14] transition-all font-bold text-xs cursor-pointer shadow-md shadow-[#5C2D14]/30"
+            className="relative flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white hover:from-[#3B1C0D] hover:to-[#5C2D14] transition-all font-bold text-xs cursor-pointer shadow-md shadow-[#5C2D14]/30"
           >
             <ShoppingBag className="w-4 h-4" />
             <span className="hidden sm:inline">Cart</span>

@@ -18,7 +18,7 @@ interface AppContextType {
   setSearchQuery: (q: string) => void;
   selectedCategory: string;
   setSelectedCategory: (cat: string) => void;
-  fetchCakes: () => Promise<void>;
+  fetchCakes: (includeHidden?: boolean) => Promise<void>;
 
   // Cart
   cart: CartItem[];
@@ -215,9 +215,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (customerUser?.college) {
       // Find matching college or set fallback item
-      setSelectedCollegeState(prev => {
+      setSelectedCollegeState((prev: CollegeItem | null) => {
         if (prev?.name === customerUser.college) return prev;
-        const matched = colleges.find(c => c.name.toLowerCase() === customerUser.college?.toLowerCase());
+        const matched = colleges.find((c: CollegeItem) => c.name.toLowerCase() === customerUser.college?.toLowerCase());
         return matched || { id: 'col-user', name: customerUser.college!, code: customerUser.college!, pickupPoint: 'CakeCampus Point', isActive: true };
       });
     }
@@ -268,10 +268,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [customerToken]);
 
   // Fetch cakes catalog from API
-  const fetchCakes = async () => {
+  const fetchCakes = async (includeHidden = false) => {
     setIsLoadingCakes(true);
     try {
-      const res = await fetch(`${API_BASE}/api/cakes?all=true`);
+      const res = await fetch(`${API_BASE}/api/cakes${includeHidden ? '?all=true' : ''}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -309,7 +309,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const selectCollege = async (collegeNameOrObj: string | CollegeItem): Promise<{ success: boolean; error?: string }> => {
     let collegeObj: CollegeItem;
     if (typeof collegeNameOrObj === 'string') {
-      const found = colleges.find(c => c.name.toLowerCase() === collegeNameOrObj.toLowerCase());
+      const found = colleges.find((c: CollegeItem) => c.name.toLowerCase() === collegeNameOrObj.toLowerCase());
       collegeObj = found || {
         id: `col-${Date.now()}`,
         name: collegeNameOrObj.trim(),
@@ -347,6 +347,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchCakes();
     fetchColleges();
@@ -379,6 +380,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkAdminAuth();
   }, [adminToken]);
@@ -461,6 +463,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     checkCustomerAuth();
   }, [customerToken]);
@@ -491,6 +494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, [customerToken]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (customerUser && customerToken) {
       fetchCustomerOrders();
@@ -612,10 +616,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Helper to compare arrays of strings
-  const areArraysEqual = (a: string[], b: string[]) => {
-    if (a.length !== b.length) return false;
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
+  const areArraysEqual = (a?: string[], b?: string[]) => {
+    const arrA = a || [];
+    const arrB = b || [];
+    if (arrA.length !== arrB.length) return false;
+    const sortedA = [...arrA].sort();
+    const sortedB = [...arrB].sort();
     return sortedA.every((val, idx) => val === sortedB[idx]);
   };
 
@@ -623,7 +629,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 1. Max 3 distinct line items
   // 2. Deduplication: if same cake + same options, increase qty instead of adding new line item
   const addToCart = (newItem: Omit<CartItem, 'id' | 'lineTotal'>): { success: boolean; message?: string } => {
-    const existingIndex = cart.findIndex(item => 
+    const existingIndex = cart.findIndex((item: CartItem) => 
       item.cakeId === newItem.cakeId &&
       item.weightKey === newItem.weightKey &&
       item.flavourKey === newItem.flavourKey &&
@@ -633,7 +639,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (existingIndex !== -1) {
       // Merge into existing line item
-      setCart(prev => {
+      setCart((prev: CartItem[]) => {
         const updated = [...prev];
         const current = updated[existingIndex];
         const newQty = current.qty + newItem.qty;
@@ -661,7 +667,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       lineTotal: newItem.unitPrice * newItem.qty,
     };
 
-    setCart(prev => [...prev, fullCartItem]);
+    setCart((prev: CartItem[]) => [...prev, fullCartItem]);
     return { success: true };
   };
 
@@ -670,7 +676,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeFromCart(id);
       return;
     }
-    setCart(prev => prev.map(item => {
+    setCart((prev: CartItem[]) => prev.map((item: CartItem) => {
       if (item.id === id) {
         return {
           ...item,
@@ -683,7 +689,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+    setCart((prev: CartItem[]) => prev.filter((item: CartItem) => item.id !== id));
   };
 
   const clearCart = () => {
@@ -707,7 +713,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(() => undefined);
   }, []);
 
-  const itemsTotal = cart.reduce((sum, item) => sum + item.lineTotal, 0);
+  const itemsTotal = cart.reduce((sum: number, item: CartItem) => sum + item.lineTotal, 0);
   const deliveryCharge = cart.length > 0 ? configuredDeliveryCharge : 0;
   const grandTotal = itemsTotal + deliveryCharge;
 

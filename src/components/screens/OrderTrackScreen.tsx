@@ -88,7 +88,7 @@ export const OrderTrackScreen: React.FC = () => {
             setAuthModalMode('login');
             setIsAuthModalOpen(true);
           }}
-          className="px-6 py-3.5 rounded-xl bg-gradient-to-r -white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+          className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
         >
           <User className="w-4 h-4" />
           <span>Sign In / Register</span>
@@ -112,7 +112,7 @@ export const OrderTrackScreen: React.FC = () => {
         </div>
         <button
           onClick={() => setCurrentScreen('catalog')}
-          className="px-6 py-3.5 rounded-xl bg-gradient-to-r -white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
+          className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-black text-xs shadow-md transition-all inline-flex items-center gap-2 cursor-pointer"
         >
           <Cake className="w-4 h-4" />
           <span>Browse Bakery Menu</span>

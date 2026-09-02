@@ -229,7 +229,8 @@ export const AdminScreen: React.FC = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        const deliverySetting = data.find((s: any) => s.key === 'delivery_charge');
+        const settings = Array.isArray(data) ? data : data.settings || [];
+        const deliverySetting = settings.find((s: { key: string }) => s.key === 'DELIVERY_CHARGE' || s.key === 'delivery_charge');
         if (deliverySetting) {
           setDeliveryCharge(Number(deliverySetting.value));
         }
@@ -367,6 +368,7 @@ export const AdminScreen: React.FC = () => {
       fetchOrders();
       fetchSettings();
       fetchPaymentConfig();
+      fetchCakes(true);
     }
   }, [adminToken, adminUser, filterStatus, filterDate]);
 
@@ -539,7 +541,7 @@ export const AdminScreen: React.FC = () => {
       });
 
       if (res.ok) {
-        fetchCakes();
+        fetchCakes(true);
       }
     } catch (err) {
       console.error('Toggle cake error:', err);
@@ -612,7 +614,7 @@ export const AdminScreen: React.FC = () => {
         setIsAddCakeOpen(false);
         setNewCakeName('');
         setNewCakeDescription('');
-        fetchCakes();
+        fetchCakes(true);
       }
     } catch (err) {
       console.error('Create item error:', err);
@@ -657,7 +659,7 @@ export const AdminScreen: React.FC = () => {
 
       if (res.ok) {
         setEditSuccessMsg('Item changes saved successfully! Live menu updated.');
-        await fetchCakes();
+        await fetchCakes(true);
         setTimeout(() => {
           setEditingCake(null);
           setEditSuccessMsg(null);
@@ -691,7 +693,7 @@ export const AdminScreen: React.FC = () => {
         if (editingCake && (editingCake.id === cakeId || editingCake._id === cakeId)) {
           setEditingCake(null);
         }
-        fetchCakes();
+        fetchCakes(true);
       } else {
         alert('Failed to delete item.');
       }
@@ -744,6 +746,7 @@ export const AdminScreen: React.FC = () => {
                 placeholder="admin@cakecampus.edu"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
+                maxLength={254}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                 required
               />
@@ -756,6 +759,8 @@ export const AdminScreen: React.FC = () => {
                 placeholder="Default: Admin@123"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
+                minLength={4}
+                maxLength={128}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                 required
               />
@@ -871,7 +876,7 @@ export const AdminScreen: React.FC = () => {
             <button
               onClick={() => {
                 fetchOrders();
-                fetchCakes();
+                fetchCakes(true);
               }}
               disabled={isLoadingOrders}
               className="p-2 rounded-xl bg-[#FFF8EE] border border-[#5C2D14]/20 text-[#7C5542] hover:bg-zinc-50 shadow-2xs cursor-pointer transition-colors"
@@ -915,6 +920,7 @@ export const AdminScreen: React.FC = () => {
                 placeholder="Search Order ID, student, roll number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                maxLength={200}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#FFF8EE] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04] shadow-2xs"
               />
             </div>
@@ -1120,6 +1126,8 @@ export const AdminScreen: React.FC = () => {
                 type="number"
                 value={deliveryCharge}
                 onChange={(e) => setDeliveryCharge(Number(e.target.value))}
+                min={0}
+                max={100000}
                 className="w-full sm:w-32 px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs font-bold"
               />
               <button
@@ -1192,6 +1200,7 @@ export const AdminScreen: React.FC = () => {
                 placeholder="Search items by name..."
                 value={catalogSearch}
                 onChange={(e) => setCatalogSearch(e.target.value)}
+                maxLength={200}
                 className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs focus:outline-hidden focus:border-[#5C2D14]"
               />
             </div>
@@ -1234,6 +1243,8 @@ export const AdminScreen: React.FC = () => {
                     value={newCakeName}
                     onChange={(e) => setNewCakeName(e.target.value)}
                     required
+                    maxLength={100}
+                    onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>{}]/g, ''); }}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs"
                   />
                 </div>
@@ -1244,6 +1255,8 @@ export const AdminScreen: React.FC = () => {
                     value={newCakeBasePrice}
                     onChange={(e) => setNewCakeBasePrice(Number(e.target.value))}
                     required
+                    min={0}
+                    max={100000}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs"
                   />
                 </div>
@@ -1282,6 +1295,7 @@ export const AdminScreen: React.FC = () => {
                   placeholder={newCakeItemType === 'cake' ? 'Rich sponge with luscious layers...' : 'Crispy golden baked cookies with pure butter...'}
                   value={newCakeDescription}
                   onChange={(e) => setNewCakeDescription(e.target.value)}
+                  maxLength={500}
                   className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs"
                 />
               </div>
@@ -1396,6 +1410,8 @@ export const AdminScreen: React.FC = () => {
                           value={editingCake.name}
                           onChange={(e) => setEditingCake({ ...editingCake, name: e.target.value })}
                           required
+                          maxLength={100}
+                          onInput={(e: React.FormEvent<HTMLInputElement>) => { e.currentTarget.value = e.currentTarget.value.replace(/[<>{}]/g, ''); }}
                           className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs font-bold"
                         />
                       </div>
@@ -1417,6 +1433,7 @@ export const AdminScreen: React.FC = () => {
                           value={editingCake.category || ''}
                           onChange={(e) => setEditingCake({ ...editingCake, category: e.target.value })}
                           placeholder="e.g. Fruit Pastries, Chocolate"
+                          maxLength={50}
                           className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs"
                         />
                       </div>
@@ -1428,6 +1445,7 @@ export const AdminScreen: React.FC = () => {
                         rows={3}
                         value={editingCake.description}
                         onChange={(e) => setEditingCake({ ...editingCake, description: e.target.value })}
+                        maxLength={500}
                         className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 text-xs"
                       />
                     </div>
@@ -1566,6 +1584,7 @@ export const AdminScreen: React.FC = () => {
                               setEditingCake({ ...editingCake, weights: updated });
                             }}
                             required
+                            maxLength={50}
                             className="flex-1 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                           />
                           <div className="flex items-center gap-1">
@@ -1579,6 +1598,8 @@ export const AdminScreen: React.FC = () => {
                                 setEditingCake({ ...editingCake, weights: updated });
                               }}
                               required
+                              min={0}
+                              max={100000}
                               className="w-24 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                             />
                           </div>
@@ -1634,6 +1655,7 @@ export const AdminScreen: React.FC = () => {
                               setEditingCake({ ...editingCake, flavours: updated });
                             }}
                             required
+                            maxLength={50}
                             className="flex-1 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                           />
                           <div className="flex items-center gap-1">
@@ -1647,6 +1669,8 @@ export const AdminScreen: React.FC = () => {
                                 setEditingCake({ ...editingCake, flavours: updated });
                               }}
                               required
+                              min={0}
+                              max={100000}
                               className="w-20 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                             />
                           </div>
@@ -1701,6 +1725,7 @@ export const AdminScreen: React.FC = () => {
                               setEditingCake({ ...editingCake, toppings: updated });
                             }}
                             required
+                            maxLength={50}
                             className="flex-1 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                           />
                           <div className="flex items-center gap-1">
@@ -1714,6 +1739,8 @@ export const AdminScreen: React.FC = () => {
                                 setEditingCake({ ...editingCake, toppings: updated });
                               }}
                               required
+                              min={0}
+                              max={100000}
                               className="w-20 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                             />
                           </div>
@@ -1766,6 +1793,7 @@ export const AdminScreen: React.FC = () => {
                               setEditingCake({ ...editingCake, addOns: updated });
                             }}
                             required
+                            maxLength={50}
                             className="flex-1 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                           />
                           <div className="flex items-center gap-1">
@@ -1779,6 +1807,8 @@ export const AdminScreen: React.FC = () => {
                                 setEditingCake({ ...editingCake, addOns: updated });
                               }}
                               required
+                              min={0}
+                              max={100000}
                               className="w-20 px-3 py-1.5 rounded-lg bg-[#FFF8EE] border border-[#5C2D14]/20 text-xs font-bold"
                             />
                           </div>
@@ -1989,6 +2019,7 @@ export const AdminScreen: React.FC = () => {
                     value={newCollegeName}
                     onChange={(e) => setNewCollegeName(e.target.value)}
                     required
+                    maxLength={150}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -2000,6 +2031,7 @@ export const AdminScreen: React.FC = () => {
                     placeholder="e.g. IITB"
                     value={newCollegeCode}
                     onChange={(e) => setNewCollegeCode(e.target.value)}
+                    maxLength={20}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04] uppercase"
                   />
                 </div>
@@ -2011,6 +2043,7 @@ export const AdminScreen: React.FC = () => {
                     placeholder="e.g. Powai, Mumbai"
                     value={newCollegeLocation}
                     onChange={(e) => setNewCollegeLocation(e.target.value)}
+                    maxLength={100}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -2022,6 +2055,7 @@ export const AdminScreen: React.FC = () => {
                     placeholder="e.g. SAC Ground Floor Counter"
                     value={newCollegePickupPoint}
                     onChange={(e) => setNewCollegePickupPoint(e.target.value)}
+                    maxLength={150}
                     className="w-full px-3 py-2 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                   />
                 </div>
@@ -2048,6 +2082,7 @@ export const AdminScreen: React.FC = () => {
               placeholder="Search colleges by name, short code, or location..."
               value={collegeSearch}
               onChange={(e) => setCollegeSearch(e.target.value)}
+              maxLength={200}
               className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#FFF8EE] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04] shadow-2xs"
             />
           </div>
@@ -2252,6 +2287,7 @@ export const AdminScreen: React.FC = () => {
                     placeholder="e.g. cakecampus@okhdfcbank"
                     value={campusUpiId}
                     onChange={(e) => setCampusUpiId(e.target.value)}
+                    maxLength={100}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs font-mono text-[#1A0A04]"
                     required
                   />
@@ -2265,6 +2301,7 @@ export const AdminScreen: React.FC = () => {
                     placeholder="e.g. CakeCampus Bakery"
                     value={campusUpiPayeeName}
                     onChange={(e) => setCampusUpiPayeeName(e.target.value)}
+                    maxLength={100}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#F5EDE4] border border-[#5C2D14]/20 focus:border-[#5C2D14] focus:outline-hidden text-xs text-[#1A0A04]"
                     required
                   />

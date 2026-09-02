@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Search, Cake, Cookie, Clock, ArrowRight } from 'lucide-react';
 
@@ -44,7 +44,7 @@ export const CakesCatalogScreen: React.FC = () => {
             onClick={() => handleSectionSwitch(s)}
             className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
               activeSection === s
-                ? 'bg-gradient-to-r -white shadow-md font-extrabold'
+                ? 'bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white shadow-md font-extrabold'
                 : 'text-amber-200/70 hover:text-amber-100 hover:bg-[#2D160D]'
             }`}
           >
@@ -76,7 +76,7 @@ export const CakesCatalogScreen: React.FC = () => {
               onClick={() => setSelectedCategory(cat)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 selectedCategory.toLowerCase() === cat.toLowerCase()
-                  ? 'bg-gradient-to-r -white font-bold shadow-sm'
+                  ? 'bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-bold shadow-sm'
                   : 'bg-[#FFF8EE] text-[#7C5542] border border-[#5C2D14]/20 hover:bg-[#5C2D14]/10'
               }`}
             >
@@ -89,7 +89,7 @@ export const CakesCatalogScreen: React.FC = () => {
       {/* Sub-heading */}
       <div className="flex items-center justify-between pt-1">
         <span className="text-sm font-bold text-[#1A0A04]">
-          {activeSection === 'cakes' ? '🎂 Available Cakes' : '🍪 Available Biscuits & Cookies'}
+          {activeSection === 'cakes' ? '?? Available Cakes' : '?? Available Biscuits & Cookies'}
         </span>
         <span className="text-xs text-[#7C5542]">({filteredItems.length} item{filteredItems.length !== 1 ? 's' : ''})</span>
       </div>
@@ -127,7 +127,7 @@ export const CakesCatalogScreen: React.FC = () => {
                       {item.category}
                     </span>
                   )}
-                  <span className="absolute bottom-3 right-3 bg-gradient-to-r -white text-xs font-black px-3 py-1 rounded-full shadow-md">
+                  <span className="absolute bottom-3 right-3 bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white text-xs font-black px-3 py-1 rounded-full shadow-md">
                     From &#8377;{minPrice} ({minWeightKey})
                   </span>
                 </div>

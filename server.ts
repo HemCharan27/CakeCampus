@@ -40,6 +40,13 @@ import { createNotionOrderRow, updateNotionOrderStatus } from './src/server/noti
 import { appendToGoogleSheet } from './src/server/googleSheetsService';
 import { sendPaymentConfirmationEmails, sendOrderCreatedEmail } from './src/server/emailService';
 import { OrderDocument, OrderStatus, AdminDocument, CustomerUserDocument } from './src/server/types';
+import {
+  sanitize, getError, validateEmail, validatePassword, validateName, validatePhone,
+  validateRollNumber, validateCollege, validateCakeMessage, validateUtr,
+  validateOrderId, validateDate, validateUrl, validateSafeText,
+  validateCollegeCode, validateUpiId, validatePrice,
+  validateOptionArray, validateWeightArray
+} from './src/server/validation';
 
 const app = express();
 const port = Number(process.env.API_PORT || 4000);
@@ -176,10 +183,14 @@ app.get('/api/health', (_req, res) => {
 // Config/Public info
 app.get('/api/config', async (_req, res) => {
   const deliveryCharge = await getSettingValue('DELIVERY_CHARGE', 50);
+  const customUpiQrUrl = await getSettingValue('CUSTOM_UPI_QR_URL', '');
+  const campusUpiId = await getSettingValue('CAMPUS_UPI_ID', CAMPUS_UPI_ID);
+  const campusUpiPayeeName = await getSettingValue('CAMPUS_UPI_PAYEE_NAME', CAMPUS_UPI_PAYEE_NAME);
   res.json({
     paymentMethod: 'UPI_QR',
-    campusUpiId: CAMPUS_UPI_ID,
-    campusUpiPayeeName: CAMPUS_UPI_PAYEE_NAME,
+    campusUpiId,
+    campusUpiPayeeName,
+    customUpiQrUrl,
     pickupPoint: 'CakeCampus Point',
     cutoffHourIST: 18,
     deliveryCharge,
@@ -192,19 +203,23 @@ app.get('/api/config', async (_req, res) => {
 // Google Sign-In & Password Setup
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { email, name, googleId, avatarUrl, password, phone, rollNumber } = req.body;
-    if (!email || !name) {
-      return res.status(400).json({ error: 'Email and Name are required for Google authentication.' });
-    }
+    const emailV = validateEmail(req.body.email);
+    if (!emailV.valid) return res.status(400).json({ error: getError(emailV) });
+    const nameV = validateName(req.body.name);
+    if (!nameV.valid) return res.status(400).json({ error: getError(nameV) });
+    const phoneV = validatePhone(req.body.phone, false);
+    if (!phoneV.valid) return res.status(400).json({ error: getError(phoneV) });
+    const rollV = validateRollNumber(req.body.rollNumber, false);
+    if (!rollV.valid) return res.status(400).json({ error: getError(rollV) });
 
     const user = await createOrUpdateGoogleUser({
-      email,
-      name,
-      googleId,
-      avatarUrl,
-      password,
-      phone,
-      rollNumber
+      email: emailV.value,
+      name: nameV.value,
+      googleId: sanitize(req.body.googleId),
+      avatarUrl: sanitize(req.body.avatarUrl),
+      password: req.body.password ? sanitize(req.body.password) : undefined,
+      phone: phoneV.value,
+      rollNumber: rollV.value
     });
 
     const token = jwt.sign(
@@ -243,26 +258,31 @@ app.post('/api/auth/google', async (req, res) => {
 // Customer Register with Email & Password
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, phone, rollNumber, college } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required.' });
-    }
-    if (password.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters long.' });
-    }
+    const nameV = validateName(req.body.name);
+    if (!nameV.valid) return res.status(400).json({ error: getError(nameV) });
+    const emailV = validateEmail(req.body.email);
+    if (!emailV.valid) return res.status(400).json({ error: getError(emailV) });
+    const passV = validatePassword(req.body.password);
+    if (!passV.valid) return res.status(400).json({ error: getError(passV) });
+    const phoneV = validatePhone(req.body.phone, false);
+    if (!phoneV.valid) return res.status(400).json({ error: getError(phoneV) });
+    const rollV = validateRollNumber(req.body.rollNumber, false);
+    if (!rollV.valid) return res.status(400).json({ error: getError(rollV) });
+    const collegeV = validateCollege(req.body.college, false);
+    if (!collegeV.valid) return res.status(400).json({ error: getError(collegeV) });
 
-    const existing = await findUserByEmail(email);
+    const existing = await findUserByEmail(emailV.value);
     if (existing) {
       return res.status(400).json({ error: 'An account with this email already exists. Please log in.' });
     }
 
     const user = await createCustomerUser({
-      name,
-      email,
-      password,
-      phone,
-      rollNumber,
-      college
+      name: nameV.value,
+      email: emailV.value,
+      password: passV.value,
+      phone: phoneV.value,
+      rollNumber: rollV.value,
+      college: collegeV.value
     });
 
     const token = jwt.sign(
@@ -301,12 +321,12 @@ app.post('/api/auth/register', async (req, res) => {
 // Customer Login with Email & Password
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
+    const emailV = validateEmail(req.body.email);
+    if (!emailV.valid) return res.status(400).json({ error: getError(emailV) });
+    const passV = validatePassword(req.body.password);
+    if (!passV.valid) return res.status(400).json({ error: getError(passV) });
 
-    const user = await findUserByEmail(email);
+    const user = await findUserByEmail(emailV.value);
     if (!user) {
       return res.status(401).json({ error: 'No account found with this email. Please register.' });
     }
@@ -315,7 +335,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ error: 'This account was signed up via Google without a password. Please sign in with Google or set a password.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    const isMatch = await bcrypt.compare(passV.value, user.passwordHash);
     if (!isMatch) {
       return res.status(401).json({ error: 'Incorrect password.' });
     }
@@ -375,12 +395,12 @@ app.get('/api/auth/me', requireCustomerAuth, (req, res) => {
 app.patch('/api/auth/select-college', requireCustomerAuth, async (req, res) => {
   try {
     const user = req.customer!;
-    const { college } = req.body;
-    if (!college || typeof college !== 'string' || !college.trim()) {
-      return res.status(400).json({ error: 'College name is required.' });
+    const collegeV = validateCollege(req.body.college, true);
+    if (!collegeV.valid) {
+      return res.status(400).json({ error: getError(collegeV) });
     }
 
-    const updated = await updateUserProfile(user.id || user._id!, { college: college.trim() });
+    const updated = await updateUserProfile(user.id || user._id!, { college: collegeV.value });
     if (!updated) {
       return res.status(404).json({ error: 'User profile not found.' });
     }
@@ -411,12 +431,30 @@ app.patch('/api/auth/profile', requireCustomerAuth, async (req, res) => {
     const user = req.customer!;
     const { name, phone, rollNumber, college, password } = req.body;
     const updates: any = {};
-    if (name) updates.name = name.trim();
-    if (phone !== undefined) updates.phone = phone.trim();
-    if (rollNumber !== undefined) updates.rollNumber = rollNumber.trim().toUpperCase();
-    if (college !== undefined) updates.college = college.trim();
-    if (password && password.trim().length >= 4) {
-      updates.passwordHash = await bcrypt.hash(password.trim(), 10);
+    if (name) {
+      const v = validateName(name);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      updates.name = v.value;
+    }
+    if (phone !== undefined) {
+      const v = validatePhone(phone, false);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      updates.phone = v.value;
+    }
+    if (rollNumber !== undefined) {
+      const v = validateRollNumber(rollNumber, false);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      updates.rollNumber = v.value;
+    }
+    if (college !== undefined) {
+      const v = validateCollege(college, false);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      updates.college = v.value;
+    }
+    if (password) {
+      const v = validatePassword(password);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      updates.passwordHash = await bcrypt.hash(v.value, 10);
     }
 
     const updated = await updateUserProfile(user.id || user._id!, updates);
@@ -466,17 +504,17 @@ app.get('/api/customer/orders', requireCustomerAuth, async (req, res) => {
 // Admin Login
 app.post('/api/admin/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required.' });
-    }
+    const emailV = validateEmail(req.body.email);
+    if (!emailV.valid) return res.status(400).json({ error: getError(emailV) });
+    const passV = validatePassword(req.body.password);
+    if (!passV.valid) return res.status(400).json({ error: getError(passV) });
 
-    const admin = await findAdminByEmail(email);
+    const admin = await findAdminByEmail(emailV.value);
     if (!admin) {
       return res.status(401).json({ error: 'Invalid admin email or password.' });
     }
 
-    const isMatch = await bcrypt.compare(password, admin.passwordHash);
+    const isMatch = await bcrypt.compare(passV.value, admin.passwordHash);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid admin email or password.' });
     }
@@ -547,16 +585,20 @@ app.get('/api/colleges', async (_req, res) => {
 // Admin Add College
 app.post('/api/admin/colleges', requireAdminAuth, async (req, res) => {
   try {
-    const { name, code, location, pickupPoint } = req.body;
-    if (!name || !name.trim()) {
-      return res.status(400).json({ error: 'College name is required.' });
-    }
+    const nameV = validateSafeText(req.body.name, 'College name', 150, true);
+    if (!nameV.valid) return res.status(400).json({ error: getError(nameV) });
+    const codeV = validateCollegeCode(req.body.code || req.body.name);
+    if (!codeV.valid) return res.status(400).json({ error: getError(codeV) });
+    const locV = validateSafeText(req.body.location, 'Location', 100);
+    if (!locV.valid) return res.status(400).json({ error: getError(locV) });
+    const ppV = validateSafeText(req.body.pickupPoint, 'Pickup point', 150);
+    if (!ppV.valid) return res.status(400).json({ error: getError(ppV) });
 
     const created = await createCollegeInDb({
-      name: name.trim(),
-      code: (code || name).trim().toUpperCase(),
-      location: (location || '').trim(),
-      pickupPoint: (pickupPoint || 'CakeCampus Point').trim(),
+      name: nameV.value,
+      code: codeV.value || nameV.value.toUpperCase(),
+      location: locV.value,
+      pickupPoint: ppV.value || 'CakeCampus Point',
       isActive: true
     });
 
@@ -584,9 +626,9 @@ app.delete('/api/admin/colleges/:id', requireAdminAuth, async (req, res) => {
 // --- CAKE CATALOG ROUTES ---
 
 // 1. GET /api/cakes - List available cakes
-app.get('/api/cakes', async (_req, res) => {
+app.get('/api/cakes', async (req, res) => {
   try {
-    const cakes = await getCakes();
+    const cakes = await getCakes(req.query.all === 'true');
     res.json(cakes);
   } catch (err: any) {
     console.error('Error fetching cakes:', err);
@@ -611,20 +653,33 @@ app.get('/api/cakes/:id', async (req, res) => {
 // Admin Create Cake
 app.post('/api/admin/cakes', requireAdminAuth, async (req, res) => {
   try {
-    const { name, description, images, weights, flavours, toppings, addOns, category, itemType } = req.body;
-    if (!name || !weights?.length || !flavours?.length) {
-      return res.status(400).json({ error: 'Name, weights array, and flavours array are required.' });
-    }
+    const nameV = validateSafeText(req.body.name, 'Cake name', 100, true);
+    if (!nameV.valid) return res.status(400).json({ error: getError(nameV) });
+    const descV = validateSafeText(req.body.description, 'Description', 500);
+    if (!descV.valid) return res.status(400).json({ error: getError(descV) });
+    const catV = validateSafeText(req.body.category, 'Category', 50);
+    if (!catV.valid) return res.status(400).json({ error: getError(catV) });
+    const weightsV = validateWeightArray(req.body.weights, true);
+    if (!weightsV.valid) return res.status(400).json({ error: getError(weightsV) });
+    const flavoursV = validateOptionArray(req.body.flavours, 'Flavours', true);
+    if (!flavoursV.valid) return res.status(400).json({ error: getError(flavoursV) });
+    const toppingsV = validateOptionArray(req.body.toppings, 'Toppings');
+    if (!toppingsV.valid) return res.status(400).json({ error: getError(toppingsV) });
+    const addOnsV = validateOptionArray(req.body.addOns, 'Add-ons');
+    if (!addOnsV.valid) return res.status(400).json({ error: getError(addOnsV) });
+    const itemType = sanitize(req.body.itemType) || 'cake';
+    if (!['cake', 'biscuit'].includes(itemType)) return res.status(400).json({ error: 'Item type must be "cake" or "biscuit".' });
+
     const created = await createCakeInDb({
-      name,
-      description,
-      images: images?.length ? images : ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80'],
-      weights,
-      flavours,
-      toppings: toppings || [],
-      addOns: addOns || [],
-      category: category || 'Classic',
-      itemType: itemType || 'cake',
+      name: nameV.value,
+      description: descV.value,
+      images: Array.isArray(req.body.images) && req.body.images.length ? req.body.images.map((u: unknown) => sanitize(u)) : ['https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=800&q=80'],
+      weights: weightsV.value,
+      flavours: flavoursV.value,
+      toppings: toppingsV.value,
+      addOns: addOnsV.value,
+      category: catV.value || 'Classic',
+      itemType: itemType as 'cake' | 'biscuit',
       isAvailable: true
     });
     res.status(201).json({ success: true, cake: created });
@@ -667,26 +722,38 @@ app.post('/api/orders', rateLimit(60_000, 5), async (req, res) => {
     const { customer, cakeMessage, pickupDate, pickupPoint, college, items } = req.body;
 
     // Validate customer details
-    if (!customer?.name || !customer?.phone || !customer?.email || !customer?.rollNumber) {
-      return res.status(400).json({ 
-        error: 'Customer name, 10-digit phone, valid email, and student roll number are all required.' 
-      });
-    }
+    const custNameV = validateName(customer?.name, 'Customer name');
+    if (!custNameV.valid) return res.status(400).json({ error: getError(custNameV) });
+    const custPhoneV = validatePhone(customer?.phone, true);
+    if (!custPhoneV.valid) return res.status(400).json({ error: getError(custPhoneV) });
+    const custEmailV = validateEmail(customer?.email);
+    if (!custEmailV.valid) return res.status(400).json({ error: getError(custEmailV) });
+    const custRollV = validateRollNumber(customer?.rollNumber, true);
+    if (!custRollV.valid) return res.status(400).json({ error: getError(custRollV) });
 
-    // REQUIREMENT A: Delivery/Pickup Date is strictly mandatory
-    if (!pickupDate || typeof pickupDate !== 'string' || !pickupDate.trim()) {
-      return res.status(400).json({
-        error: 'Delivery/Pickup Date is mandatory before checkout.'
-      });
-    }
+    // Validate pickup date
+    const dateV = validateDate(pickupDate, 'Delivery/Pickup Date');
+    if (!dateV.valid) return res.status(400).json({ error: getError(dateV) });
 
     // Business Rule: Validate Pre-Order Cutoff (Previous Day 6:00 PM IST)
-    const cutoffCheck = checkPickupCutoff(pickupDate);
+    const cutoffCheck = checkPickupCutoff(dateV.value);
     if (!cutoffCheck.isValid) {
       return res.status(400).json({ 
         error: cutoffCheck.reason || 'Orders for this date close at 6:00 PM the previous day.' 
       });
     }
+
+    // Validate cake message
+    const msgV = validateCakeMessage(cakeMessage);
+    if (!msgV.valid) return res.status(400).json({ error: getError(msgV) });
+
+    // Validate college
+    const collegeV = validateCollege(college || customer?.college, false);
+    if (!collegeV.valid) return res.status(400).json({ error: getError(collegeV) });
+
+    // Validate pickup point
+    const ppV = validateSafeText(pickupPoint, 'Pickup point', 150);
+    if (!ppV.valid) return res.status(400).json({ error: getError(ppV) });
 
     // Business Rule: Recalculate and validate pricing & items server-side
     let calculatedOrder;
@@ -703,22 +770,21 @@ app.post('/api/orders', rateLimit(60_000, 5), async (req, res) => {
     const orderId = generateOrderId();
     const upiNote = `CakeCampus ${orderId}`;
     const upiQrString = customUpiQrUrl || `upi://pay?pa=${encodeURIComponent(activeUpiId)}&pn=${encodeURIComponent(activePayeeName)}&am=${calculatedOrder.totalAmount}&cu=INR&tn=${encodeURIComponent(upiNote)}`;
-    const selectedCollege = (college || customer.college || '').trim();
 
     // Build MongoDB Order Document
     const orderDoc: OrderDocument = {
       orderId,
       customer: {
-        name: customer.name.trim(),
-        phone: customer.phone.trim(),
-        email: customer.email.trim().toLowerCase(),
-        rollNumber: customer.rollNumber.trim().toUpperCase(),
-        college: selectedCollege
+        name: custNameV.value,
+        phone: custPhoneV.value,
+        email: custEmailV.value,
+        rollNumber: custRollV.value,
+        college: collegeV.value
       },
-      college: selectedCollege,
-      cakeMessage: (cakeMessage || '').trim(),
-      pickupDate: new Date(`${pickupDate.trim()}T00:00:00.000Z`),
-      pickupPoint: (pickupPoint || 'CakeCampus Point').trim(),
+      college: collegeV.value,
+      cakeMessage: msgV.value,
+      pickupDate: new Date(`${dateV.value}T00:00:00.000Z`),
+      pickupPoint: ppV.value || 'CakeCampus Point',
       items: calculatedOrder.items,
       itemsTotal: calculatedOrder.itemsTotal,
       deliveryCharge: calculatedOrder.deliveryCharge,
@@ -766,7 +832,7 @@ app.post('/api/orders', rateLimit(60_000, 5), async (req, res) => {
       upiId: activeUpiId,
       payeeName: activePayeeName,
       upiNote,
-      pickupDate: pickupDate.trim(),
+      pickupDate: dateV.value,
       pickupPoint: savedOrder.pickupPoint
     });
   } catch (err: any) {
@@ -827,12 +893,11 @@ app.post('/api/uploads/payment-proof', rateLimit(60_000, 10), async (req, res) =
 // 5. POST /api/orders/:orderId/payment-proof - Submit UTR + screenshot URL
 app.post('/api/orders/:orderId/payment-proof', rateLimit(60_000, 10), async (req, res) => {
   try {
-    const { utr, screenshotUrl } = req.body;
     const { orderId } = req.params;
-
-    if (!utr || String(utr).trim().length < 8) {
-      return res.status(400).json({ error: 'UTR / Transaction ID is required (minimum 8 characters).' });
-    }
+    const utrV = validateUtr(req.body.utr);
+    if (!utrV.valid) return res.status(400).json({ error: getError(utrV) });
+    const screenshotV = validateUrl(req.body.screenshotUrl);
+    if (!screenshotV.valid) return res.status(400).json({ error: getError(screenshotV) });
 
     const order = await findOrderByOrderId(orderId);
     if (!order) {
@@ -844,25 +909,21 @@ app.post('/api/orders/:orderId/payment-proof', rateLimit(60_000, 10), async (req
     }
 
     // Duplicate UTR check
-    const existingWithUtr = await findOrderByUtr(utr.trim());
+    const existingWithUtr = await findOrderByUtr(utrV.value);
     if (existingWithUtr && existingWithUtr.orderId !== orderId) {
       return res.status(400).json({ error: 'This UTR has already been used for another order. Please check your transaction details.' });
     }
 
-    if (screenshotUrl !== undefined && (typeof screenshotUrl !== 'string' || !screenshotUrl.startsWith('http'))) {
-      return res.status(400).json({ error: 'Invalid screenshot URL.' });
-    }
-
     const updated = await updateOrderStatusInDb(orderId, 'PAYMENT_SUBMITTED', {
-      utr: utr.trim(),
-      screenshotUrl: screenshotUrl || undefined,
+      utr: utrV.value,
+      screenshotUrl: screenshotV.value || undefined,
       submittedAt: new Date().toISOString(),
       verificationStatus: 'SUBMITTED'
     });
 
     // Update Notion
     if (updated?.notion?.pageId) {
-      updateNotionOrderStatus(updated.notion.pageId, 'PAYMENT_SUBMITTED', { utr: utr.trim() })
+      updateNotionOrderStatus(updated.notion.pageId, 'PAYMENT_SUBMITTED', { utr: utrV.value })
         .catch(err => console.error('Notion UTR update error:', err));
     }
 
@@ -915,8 +976,9 @@ app.patch('/api/admin/orders/:orderId/verify-payment', requireAdminAuth, async (
 
       return res.json({ success: true, message: 'Payment verified.', order: updated });
     } else {
+      const reasonV = validateSafeText(rejectionReason, 'Rejection reason', 500);
       const updated = await updateOrderStatusInDb(orderId, 'PAYMENT_REJECTED', {
-        rejectionReason: rejectionReason || 'Payment could not be verified.',
+        rejectionReason: (reasonV.valid ? reasonV.value : '') || 'Payment could not be verified.',
         verificationStatus: 'REJECTED'
       });
 
@@ -930,20 +992,6 @@ app.patch('/api/admin/orders/:orderId/verify-payment', requireAdminAuth, async (
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Payment verification failed.' });
   }
-});
-
-// Public config endpoint for client apps
-app.get('/api/config', async (_req, res) => {
-  const deliveryCharge = await getSettingValue('DELIVERY_CHARGE', 50);
-  const customUpiQrUrl = await getSettingValue('CUSTOM_UPI_QR_URL', '');
-  const campusUpiId = await getSettingValue('CAMPUS_UPI_ID', CAMPUS_UPI_ID);
-  const campusUpiPayeeName = await getSettingValue('CAMPUS_UPI_PAYEE_NAME', CAMPUS_UPI_PAYEE_NAME);
-  res.json({
-    deliveryCharge,
-    customUpiQrUrl,
-    campusUpiId,
-    campusUpiPayeeName,
-  });
 });
 
 // Admin settings endpoints
@@ -964,12 +1012,10 @@ app.get('/api/admin/settings', requireAdminAuth, async (_req, res) => {
 });
 
 app.patch('/api/admin/settings/delivery-charge', requireAdminAuth, async (req, res) => {
-  const { value } = req.body;
-  if (typeof value !== 'number' || value < 0) {
-    return res.status(400).json({ error: 'Delivery charge must be a non-negative number.' });
-  }
-  await setSettingValue('DELIVERY_CHARGE', value, 'INR');
-  res.json({ success: true, message: `Delivery charge updated to ₹${value}.` });
+  const priceV = validatePrice(req.body.value, 'Delivery charge');
+  if (!priceV.valid) return res.status(400).json({ error: getError(priceV) });
+  await setSettingValue('DELIVERY_CHARGE', priceV.value, 'INR');
+  res.json({ success: true, message: `Delivery charge updated to ₹${priceV.value}.` });
 });
 
 // Admin Payment & QR Management Routes
@@ -1002,13 +1048,19 @@ app.post('/api/admin/payments/config', requireAdminAuth, async (req, res) => {
   try {
     const { campusUpiId, campusUpiPayeeName, customUpiQrUrl } = req.body;
     if (campusUpiId !== undefined) {
-      await setSettingValue('CAMPUS_UPI_ID', String(campusUpiId).trim());
+      const v = validateUpiId(campusUpiId, true);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      await setSettingValue('CAMPUS_UPI_ID', v.value);
     }
     if (campusUpiPayeeName !== undefined) {
-      await setSettingValue('CAMPUS_UPI_PAYEE_NAME', String(campusUpiPayeeName).trim());
+      const v = validateSafeText(campusUpiPayeeName, 'Payee name', 100, true);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      await setSettingValue('CAMPUS_UPI_PAYEE_NAME', v.value);
     }
     if (customUpiQrUrl !== undefined) {
-      await setSettingValue('CUSTOM_UPI_QR_URL', String(customUpiQrUrl).trim());
+      const v = validateUrl(customUpiQrUrl);
+      if (!v.valid) return res.status(400).json({ error: getError(v) });
+      await setSettingValue('CUSTOM_UPI_QR_URL', v.value);
     }
     res.json({ success: true, message: 'Payment settings saved successfully.' });
   } catch (err: any) {
@@ -1077,14 +1129,20 @@ app.post('/api/admin/orders/:orderId/send-confirmation-email', requireAdminAuth,
 // 6. GET /api/orders/track - Order tracking (Order ID + Phone/Email)
 app.get('/api/orders/track', async (req, res) => {
   try {
-    const orderId = String(req.query.orderId || '').trim();
-    const phoneOrEmail = String(req.query.phone || req.query.email || '').trim();
+    const orderIdRaw = sanitize(req.query.orderId);
+    const phoneOrEmailRaw = sanitize(req.query.phone || req.query.email);
 
-    if (!orderId || !phoneOrEmail) {
-      return res.status(400).json({ error: 'Both Order ID and registered Phone (or Email) are required.' });
+    if (!orderIdRaw) {
+      return res.status(400).json({ error: 'Order ID is required.' });
+    }
+    if (orderIdRaw.length > 20) {
+      return res.status(400).json({ error: 'Order ID is too long.' });
+    }
+    if (!phoneOrEmailRaw || phoneOrEmailRaw.length > 254) {
+      return res.status(400).json({ error: 'Phone or Email is required.' });
     }
 
-    const order = await findOrdersForTracking(orderId, phoneOrEmail);
+    const order = await findOrdersForTracking(orderIdRaw, phoneOrEmailRaw);
     if (!order) {
       return res.status(404).json({ 
         error: 'No matching order found. Please check your Order ID and phone number / email.' 

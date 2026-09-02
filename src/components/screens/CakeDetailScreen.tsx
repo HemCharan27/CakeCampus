@@ -16,6 +16,30 @@ import {
 export const CakeDetailScreen: React.FC = () => {
   const { selectedCake, setCurrentScreen, addToCart, cart, formatPrice } = useApp();
 
+  const [selectedWeightKey, setSelectedWeightKey] = useState<string>(
+    selectedCake?.weights[0]?.key || '1kg'
+  );
+  const [selectedFlavourKey, setSelectedFlavourKey] = useState<string>(
+    selectedCake?.flavours[0]?.key || 'Chocolate'
+  );
+  const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [qty, setQty] = useState<number>(1);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (selectedCake) {
+      setSelectedWeightKey(selectedCake.weights[0]?.key || '1kg');
+      setSelectedFlavourKey(selectedCake.flavours[0]?.key || 'Chocolate');
+      setSelectedToppings([]);
+      setSelectedAddOns([]);
+      setQty(1);
+      setActiveImageIndex(0);
+      setToastMessage(null);
+    }
+  }, [selectedCake?.id]);
+
   if (!selectedCake) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
@@ -29,32 +53,6 @@ export const CakeDetailScreen: React.FC = () => {
       </div>
     );
   }
-
-  // Selections
-  const [selectedWeightKey, setSelectedWeightKey] = useState<string>(
-    selectedCake.weights[0]?.key || '1kg'
-  );
-  const [selectedFlavourKey, setSelectedFlavourKey] = useState<string>(
-    selectedCake.flavours[0]?.key || 'Chocolate'
-  );
-  const [selectedToppings, setSelectedToppings] = useState<string[]>([]);
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
-  const [qty, setQty] = useState<number>(1);
-  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-
-  // Reset selections when cake changes
-  useEffect(() => {
-    if (selectedCake) {
-      setSelectedWeightKey(selectedCake.weights[0]?.key || '1kg');
-      setSelectedFlavourKey(selectedCake.flavours[0]?.key || 'Chocolate');
-      setSelectedToppings([]);
-      setSelectedAddOns([]);
-      setQty(1);
-      setActiveImageIndex(0);
-      setToastMessage(null);
-    }
-  }, [selectedCake?.id]);
 
   // Live Price Calculation
   const selectedWeight = selectedCake.weights.find(w => w.key === selectedWeightKey) || selectedCake.weights[0];
@@ -427,7 +425,7 @@ export const CakeDetailScreen: React.FC = () => {
             {/* Add to Cart CTA */}
             <button
               onClick={handleAddToCart}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r -white font-black text-sm shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-amber-300/40"
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#5C2D14] to-[#3B1C0D] text-white font-black text-sm shadow-lg shadow-amber-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98 border border-amber-300/40"
             >
               <ShoppingBag className="w-4 h-4 text-[#1A0A04]" />
               <span>Add to Cart • ₹{lineTotal}</span>
