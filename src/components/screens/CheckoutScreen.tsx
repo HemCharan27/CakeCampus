@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { storage } from '../../firebase';
 import { DateTime } from 'luxon';
 import { 
   ArrowLeft, 
@@ -266,14 +267,12 @@ export const CheckoutScreen: React.FC = () => {
       const orderId = createdOrder.orderId || createdOrder.order?.orderId;
       let screenshotUrl: string | undefined;
       if (screenshotBase64) {
-        const uploadRes = await fetch(`${API_BASE}/api/uploads/payment-proof`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageData: screenshotBase64 })
-        });
-        const uploadData = await uploadRes.json();
-        if (!uploadRes.ok || !uploadData.screenshotUrl) throw new Error(uploadData.error || 'Failed to upload screenshot.');
-        screenshotUrl = uploadData.screenshotUrl;
+        if (!storage) throw new Error('Cloud storage is not configured.');
+        const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
+        const filename = `payment-proofs/${orderId}-${Date.now()}.jpg`;
+        const storageRef = ref(storage, filename);
+        await uploadString(storageRef, screenshotBase64, 'data_url');
+        screenshotUrl = await getDownloadURL(storageRef);
       }
 
       const res = await fetch(`${API_BASE}/api/orders/${orderId}/payment-proof`, {

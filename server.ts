@@ -67,9 +67,8 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ limit: '25mb', extended: true }));
 app.use(cookieParser());
 
-const paymentProofDir = path.resolve(process.env.UPLOAD_DIR || './uploads/payment-proofs');
-fs.mkdirSync(paymentProofDir, { recursive: true });
-app.use('/uploads', express.static(path.dirname(paymentProofDir)));
+// The /uploads route is still used for qr codes
+app.use('/uploads', express.static(path.resolve('./uploads')));
 
 // UPI configuration from environment
 const CAMPUS_UPI_ID = process.env.CAMPUS_UPI_ID || 'cakecampus@okhdfcbank';
@@ -804,25 +803,7 @@ app.get('/api/orders/:orderId/payment', async (req, res) => {
   }
 });
 
-// Upload payment proof outside MongoDB. The client sends a validated, resized image data URL.
-app.post('/api/uploads/payment-proof', rateLimit(60_000, 10), async (req, res) => {
-  try {
-    const imageData = String(req.body?.imageData || '');
-    const match = imageData.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
-    if (!match) return res.status(400).json({ error: 'Screenshot must be a JPEG, PNG, or WebP image.' });
-    const buffer = Buffer.from(match[2], 'base64');
-    if (!buffer.length || buffer.length > 5 * 1024 * 1024) {
-      return res.status(400).json({ error: 'Screenshot too large (max 5MB).' });
-    }
-    const extension = match[1].split('/')[1].replace('jpeg', 'jpg');
-    const filename = `${crypto.randomUUID()}.${extension}`;
-    fs.writeFileSync(path.join(paymentProofDir, filename), buffer, { flag: 'wx' });
-    const baseUrl = process.env.APP_URL || `http://localhost:${port}`;
-    res.status(201).json({ success: true, screenshotUrl: `${baseUrl}/uploads/payment-proofs/${filename}` });
-  } catch (err: any) {
-    res.status(500).json({ error: err?.message || 'Failed to store screenshot.' });
-  }
-});
+// Payment proof uploads are now handled directly by the client using Firebase Cloud Storage.
 
 // 5. POST /api/orders/:orderId/payment-proof - Submit UTR + screenshot URL
 app.post('/api/orders/:orderId/payment-proof', rateLimit(60_000, 10), async (req, res) => {
