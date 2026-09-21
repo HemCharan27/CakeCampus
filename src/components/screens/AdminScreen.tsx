@@ -136,6 +136,8 @@ export const AdminScreen: React.FC = () => {
   // Orders state
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isDeletingOrders, setIsDeletingOrders] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [filterDate, setFilterDate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -526,6 +528,40 @@ export const AdminScreen: React.FC = () => {
   };
 
   const handleStatusUpdate = handleStatusChange;
+
+  const handleDeleteSelectedOrders = async () => {
+    if (!adminToken || selectedOrderIds.length === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to permanently delete ${selectedOrderIds.length} selected order(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingOrders(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/orders`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ orderIds: selectedOrderIds })
+      });
+
+      if (res.ok) {
+        setSelectedOrderIds([]);
+        fetchOrders(); // Refresh table
+        alert('Selected orders deleted successfully.');
+      } else {
+        const error = await res.json();
+        alert(error.error || 'Failed to delete orders.');
+      }
+    } catch (err) {
+      console.error('Delete orders error:', err);
+      alert('An error occurred while deleting orders.');
+    } finally {
+      setIsDeletingOrders(false);
+    }
+  };
 
   const handleToggleAvailability = async (cakeId: string, currentStatus: boolean) => {
     if (!adminToken) return;
@@ -955,6 +991,18 @@ export const AdminScreen: React.FC = () => {
               )}
             </div>
           </div>
+          
+          {selectedOrderIds.length > 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={handleDeleteSelectedOrders}
+                disabled={isDeletingOrders}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+              >
+                {isDeletingOrders ? 'Deleting...' : `Delete Selected (${selectedOrderIds.length})`}
+              </button>
+            </div>
+          )}
 
           {/* Orders Table */}
           <div className="bg-[#FFF8EE] rounded-3xl border border-[#F3EAE3] shadow-xs overflow-hidden">
@@ -962,7 +1010,21 @@ export const AdminScreen: React.FC = () => {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#F5EDE4] border-b border-[#5C2D14]/20 text-[#7C5542] font-bold">
                   <tr>
-                    <th className="p-3.5 pl-5">Order ID</th>
+                    <th className="p-3.5 pl-5">
+                      <input
+                        type="checkbox"
+                        checked={filteredOrders.length > 0 && selectedOrderIds.length === filteredOrders.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedOrderIds(filteredOrders.map(o => o.orderId));
+                          } else {
+                            setSelectedOrderIds([]);
+                          }
+                        }}
+                        className="cursor-pointer"
+                      />
+                    </th>
+                    <th className="p-3.5">Order ID</th>
                     <th className="p-3.5">Student / Roll</th>
                     <th className="p-3.5">Pickup Date</th>
                     <th className="p-3.5">Items Summary</th>
@@ -975,7 +1037,7 @@ export const AdminScreen: React.FC = () => {
                 <tbody className="divide-y divide-zinc-100">
                   {filteredOrders.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="p-12 text-center text-[#7C5542]/70">
+                      <td colSpan={9} className="p-12 text-center text-[#7C5542]/70">
                         No orders matching the current filter.
                       </td>
                     </tr>
@@ -990,7 +1052,21 @@ export const AdminScreen: React.FC = () => {
 
                       return (
                         <tr key={order.orderId} className="hover:bg-zinc-50/70 transition-colors">
-                          <td className="p-3.5 pl-5 font-mono font-bold text-[#5C2D14]">
+                          <td className="p-3.5 pl-5">
+                            <input
+                              type="checkbox"
+                              checked={selectedOrderIds.includes(order.orderId)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedOrderIds(prev => [...prev, order.orderId]);
+                                } else {
+                                  setSelectedOrderIds(prev => prev.filter(id => id !== order.orderId));
+                                }
+                              }}
+                              className="cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-3.5 font-mono font-bold text-[#5C2D14]">
                             {order.orderId}
                           </td>
                           <td className="p-3.5">
@@ -1001,12 +1077,16 @@ export const AdminScreen: React.FC = () => {
                             <div className="font-semibold text-[#1A0A04]">{pickupDateStr}</div>
                             <div className="text-[10px] text-[#7C5542]/70">{order.pickupPoint || 'CakeCampus Point'}</div>
                           </td>
-                          <td className="p-3.5 max-w-xs truncate">
-                            <div className="text-[#1A0A04] font-medium truncate">
-                              {order.items.map(i => `${i.qty}x ${i.cakeNameSnapshot} (${i.weightKey}, ${i.flavourKey})`).join(', ')}
+                          <td className="p-3.5 max-w-xs">
+                            <div className="text-[#1A0A04] font-medium space-y-1">
+                              {order.items.map((i, idx) => (
+                                <div key={idx}>
+                                  {i.qty}x {i.cakeNameSnapshot} ({i.weightKey}, {i.flavourKey})
+                                </div>
+                              ))}
                             </div>
                             {order.cakeMessage && (
-                              <div className="text-[10px] text-[#5C2D14] truncate">
+                              <div className="text-[10px] text-[#5C2D14] mt-1">
                                 Msg: "{order.cakeMessage}"
                               </div>
                             )}

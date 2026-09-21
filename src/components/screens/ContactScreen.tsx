@@ -70,7 +70,7 @@ export const ContactScreen: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-[#1A0A04] text-base font-serif">Email Support</h3>
-              <p className="text-xs font-mono font-bold text-[#5C2D14]">support@cakecampus.in</p>
+              <p className="text-xs font-mono font-bold text-[#5C2D14]">cakecampuss@gmail.com</p>
             </div>
           </div>
           <p className="text-xs text-[#7C5542] leading-relaxed">
@@ -86,7 +86,7 @@ export const ContactScreen: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-[#1A0A04] text-base font-serif">Campus Helpline</h3>
-              <p className="text-xs font-mono font-bold text-[#5C2D14]">+91 98480 34567</p>
+              <p className="text-xs font-mono font-bold text-[#5C2D14]">+91 9010677012</p>
             </div>
           </div>
           <p className="text-xs text-[#7C5542] leading-relaxed">

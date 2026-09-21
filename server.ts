@@ -1264,7 +1264,7 @@ app.patch('/api/admin/orders/:orderId/status', requireAdminAuth, async (req, res
 const distDir = path.resolve('./dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
-  app.get(/.*/, (req, res, next) => {
+  app.get('/{*splat}', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }

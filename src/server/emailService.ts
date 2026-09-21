@@ -1,28 +1,38 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { OrderDocument } from './types';
 
-let transporter: nodemailer.Transporter | null = null;
+let resend: Resend | null = null;
 
-const setupTransporter = () => {
-  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-    console.log('📧 Nodemailer SMTP transporter configured.');
-  } else {
-    console.log('ℹ️ SMTP credentials not configured. Emails will be logged to console / mock dispatched.');
-  }
-};
-
-setupTransporter();
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+  console.log('📧 Resend email service configured.');
+} else {
+  console.log('ℹ️ RESEND_API_KEY not set. Emails will be logged to console / mock dispatched.');
+}
 
 const sentEmailOrders = new Set<string>();
+
+const fromAddr = () => process.env.MAIL_FROM || 'CakeCampus <onboarding@resend.dev>';
+const adminAddr = () => process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || 'cakecampuss@gmail.com';
+
+const sendMail = async (to: string, subject: string, html: string): Promise<boolean> => {
+  if (!resend) {
+    console.log(`[Email Service - Simulated] To: ${to} | Subject: ${subject}`);
+    return true;
+  }
+  try {
+    const { error } = await resend.emails.send({ from: fromAddr(), to, subject, html });
+    if (error) {
+      console.error(`Failed to send email to ${to}:`, error.message);
+      return false;
+    }
+    console.log(`✉️ Email sent to ${to}: ${subject}`);
+    return true;
+  } catch (e: any) {
+    console.error(`Failed to send email to ${to}:`, e?.message || e);
+    return false;
+  }
+};
 
 const formatItemsHtml = (order: OrderDocument): string => {
   return order.items.map(item => `
@@ -42,24 +52,6 @@ const formatItemsHtml = (order: OrderDocument): string => {
 
 const getPickupDate = (order: OrderDocument): string =>
   typeof order.pickupDate === 'string' ? order.pickupDate.split('T')[0] : order.pickupDate.toISOString().split('T')[0];
-
-const fromAddr = () => process.env.MAIL_FROM || 'CakeCampus <orders@cakecampus.edu>';
-const adminAddr = () => process.env.OWNER_EMAIL || process.env.ADMIN_EMAIL || 'admin@cakecampus.edu';
-
-const sendMail = async (to: string, subject: string, html: string): Promise<boolean> => {
-  if (!transporter) {
-    console.log(`[Email Service - Simulated] To: ${to} | Subject: ${subject}`);
-    return true;
-  }
-  try {
-    await transporter.sendMail({ from: fromAddr(), to, subject, html });
-    console.log(`✉️ Email sent to ${to}: ${subject}`);
-    return true;
-  } catch (e: any) {
-    console.error(`Failed to send email to ${to}:`, e?.message || e);
-    return false;
-  }
-};
 
 /** Sent when order is created (PAYMENT_PENDING) — instructs customer to pay and submit UTR */
 export const sendOrderCreatedEmail = async (order: OrderDocument): Promise<boolean> => {
@@ -105,12 +97,12 @@ export const sendPaymentConfirmationEmails = async (
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #2A050F; background: #FAF7F5; padding: 24px; border-radius: 12px; border: 1px solid #F3EAE3;">
       <div style="text-align: center; margin-bottom: 20px;">
         <h1 style="color: #E11D48; margin-bottom: 4px; font-size: 26px;">🎂 CakeCampus</h1>
-        <p style="margin: 0; color: #666; font-size: 14px;">Campus Pre-Order Confirmation & Receipt</p>
+        <p style="margin: 0; color: #666; font-size: 14px;">Campus Pre-Order Confirmation &amp; Receipt</p>
       </div>
       <div style="background: #ffffff; padding: 24px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
         <div style="text-align: center; margin-bottom: 16px;">
           <span style="background: #ECFDF5; color: #059669; font-weight: bold; font-size: 14px; padding: 6px 16px; border-radius: 20px; border: 1px solid #A7F3D0; display: inline-block;">
-            ✓ Order Placed & Payment Verified
+            ✓ Order Placed &amp; Payment Verified
           </span>
         </div>
         <h2 style="color: #2A050F; margin-top: 10px; font-size: 18px;">Hi ${order.customer.name},</h2>
@@ -179,4 +171,3 @@ export const sendPaymentConfirmationEmails = async (
 };
 
 export const sendOrderConfirmationEmail = sendPaymentConfirmationEmails;
-

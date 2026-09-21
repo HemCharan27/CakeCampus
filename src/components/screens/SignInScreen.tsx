@@ -18,7 +18,7 @@ import {
 export const SignInScreen: React.FC = () => {
   const { loginCustomer, loginWithGoogle, registerCustomer, setCurrentScreen } = useApp();
 
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>('register');
 
   // Form fields
   const [email, setEmail] = useState('');

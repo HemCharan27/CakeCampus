@@ -181,9 +181,11 @@ export const OrderTrackScreen: React.FC = () => {
                   </div>
 
                   <div className="text-xs space-y-0.5">
-                    <p className="text-[#1A0A04] font-bold line-clamp-1">
-                      {order.items.map(i => `${i.qty}x ${i.cakeNameSnapshot}`).join(', ')}
-                    </p>
+                    <div className="text-[#1A0A04] font-bold">
+                      {order.items.map((i, idx) => (
+                        <div key={idx}>{i.qty}x {i.cakeNameSnapshot}</div>
+                      ))}
+                    </div>
                     <div className="flex items-center justify-between text-[11px] text-[#7C5542] pt-1">
                       <span>Pickup: {pickupDateStr}</span>
                       <span className="font-bold text-[#1A0A04]">₹{order.totalAmount}</span>

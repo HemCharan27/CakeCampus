@@ -751,6 +751,28 @@ export const getAllOrders = async (): Promise<OrderDocument[]> => {
   }
 };
 
+export const deleteOrdersInDb = async (orderIds: string[]): Promise<boolean> => {
+  if (isMongoConnected) {
+    try {
+      await OrderModel.deleteMany({ orderId: { $in: orderIds } });
+      return true;
+    } catch (e) {
+      console.warn('Mongo deleteOrders error:', e);
+      return false;
+    }
+  }
+  
+  await ensureLocalSeed();
+  try {
+    const list = JSON.parse(fs.readFileSync(ordersFile, 'utf8'));
+    const filtered = list.filter((o: any) => !orderIds.includes(o.orderId));
+    fs.writeFileSync(ordersFile, JSON.stringify(filtered, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const updateOrderStatusInDb = async (
   orderId: string, 
   status: OrderStatus, 
