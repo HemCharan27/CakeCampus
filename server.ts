@@ -18,6 +18,7 @@ import {
   findOrderByOrderId, 
   findOrdersForTracking, 
   getAllOrders, 
+  deleteOrdersInDb,
   updateOrderStatusInDb,
   findAdminByEmail,
   getAdminById,
@@ -49,7 +50,7 @@ import {
 } from './src/server/validation';
 
 const app = express();
-const port = Number(process.env.API_PORT || 4000);
+const port = Number(process.env.PORT || process.env.API_PORT || 4000);
 const JWT_SECRET = process.env.JWT_SECRET || 'cakecampus_secret_key_2026_campus_auth';
 
 // Extend Express Request types for admin and customer auth
@@ -1181,6 +1182,24 @@ app.get('/api/admin/orders', requireAdminAuth, async (req, res) => {
   }
 });
 
+// DELETE /api/admin/orders - Delete selected orders
+app.delete('/api/admin/orders', requireAdminAuth, async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ error: 'orderIds array is required' });
+    }
+    const success = await deleteOrdersInDb(orderIds);
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to delete orders' });
+    }
+    res.json({ message: 'Orders deleted successfully' });
+  } catch (err: any) {
+    console.error('Admin delete orders error:', err);
+    res.status(500).json({ error: 'Failed to delete orders.' });
+  }
+});
+
 // 8. PATCH /api/admin/orders/:orderId/status - Update order status (Protected by JWT Auth)
 app.patch('/api/admin/orders/:orderId/status', requireAdminAuth, async (req, res) => {
   try {
@@ -1245,7 +1264,7 @@ app.patch('/api/admin/orders/:orderId/status', requireAdminAuth, async (req, res
 const distDir = path.resolve('./dist');
 if (fs.existsSync(distDir)) {
   app.use(express.static(distDir));
-  app.get('*', (req, res, next) => {
+  app.get(/.*/, (req, res, next) => {
     if (req.path.startsWith('/api') || req.path.startsWith('/uploads')) {
       return next();
     }
@@ -1255,12 +1274,12 @@ if (fs.existsSync(distDir)) {
 
 // Initialize database & Start server
 connectDatabase().then(() => {
-  app.listen(port, () => {
+  app.listen(port, "0.0.0.0", () => {
     console.log(`🎂 CakeCampus backend server running on http://localhost:${port}`);
   });
 }).catch(err => {
   console.error('Database connection failed, starting server in local mode:', err);
-  app.listen(port, () => {
+  app.listen(port, "0.0.0.0", () => {
     console.log(`🎂 CakeCampus backend server running on http://localhost:${port} (Local Mode)`);
   });
 });
