@@ -128,8 +128,8 @@ export const AdminScreen: React.FC = () => {
   const [collegeSearch, setCollegeSearch] = useState('');
 
   // Login form states
-  const [emailInput, setEmailInput] = useState('admin@cakecampus.edu');
-  const [passwordInput, setPasswordInput] = useState('Admin@123');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -779,7 +779,7 @@ export const AdminScreen: React.FC = () => {
               <label className="text-xs font-bold text-[#7C5542]">Admin Email</label>
               <input
                 type="email"
-                placeholder="admin@cakecampus.edu"
+                placeholder="Enter admin email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 maxLength={254}
@@ -792,7 +792,7 @@ export const AdminScreen: React.FC = () => {
               <label className="text-xs font-bold text-[#7C5542]">Admin Password</label>
               <input
                 type="password"
-                placeholder="Default: Admin@123"
+                placeholder="Enter admin password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 minLength={4}
@@ -810,10 +810,6 @@ export const AdminScreen: React.FC = () => {
               {isLoggingIn ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
               <span>Log In to Admin Dashboard</span>
             </button>
-
-            <p className="text-[11px] text-[#7C5542]/70 text-center pt-1">
-              Default credentials: <code className="bg-zinc-100 px-1 py-0.5 rounded text-[#7C5542] font-mono">admin@cakecampus.edu</code> / <code className="bg-zinc-100 px-1 py-0.5 rounded text-[#7C5542] font-mono">Admin@123</code>
-            </p>
           </form>
         </div>
 
