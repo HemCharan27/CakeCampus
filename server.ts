@@ -64,8 +64,20 @@ declare global {
 }
 
 // Middleware
+const allowedOrigins = [process.env.FRONTEND_URL, process.env.APP_URL]
+  .map((url) => url?.trim().replace(/\/$/, ''))
+  .filter((url): url is string => Boolean(url));
+
 app.use(cors({
-  origin: true,
+  origin: allowedOrigins.length
+    ? (origin, callback) => {
+        // Non-browser requests have no Origin header and should remain allowed.
+        if (!origin || allowedOrigins.includes(origin.replace(/\/$/, ''))) {
+          return callback(null, true);
+        }
+        return callback(new Error('Origin is not allowed by CORS'));
+      }
+    : true,
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Password']

@@ -89,6 +89,17 @@ npm run dev
 npm run test:e2e
 ```
 
+### Deploying frontend and backend separately on Render
+
+For the current deployment, set these build/runtime environment variables in Render:
+
+- Backend service: `FRONTEND_URL=https://cakecampus.onrender.com`
+- Frontend service: `VITE_API_URL=https://cakecampus.onrender.com`
+
+Because Vite embeds `VITE_API_URL` at build time, redeploy the frontend after
+changing it. Keep the backend URL without a trailing `/api`; the frontend
+normalizes that suffix automatically.
+
 ---
 
 ## 📡 API Reference
