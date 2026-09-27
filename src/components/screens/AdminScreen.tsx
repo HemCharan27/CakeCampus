@@ -38,6 +38,7 @@ import {
   Mail
 } from 'lucide-react';
 import { CanonicalOrderStatus, OrderData, CakeItem } from '../../types';
+import { API_BASE } from '../../config';
 
 // Helper to compress and convert device file into a crisp Base64 Data URL
 const processImageFile = (file: File): Promise<string> => {
@@ -78,7 +79,6 @@ const processImageFile = (file: File): Promise<string> => {
   });
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const ALL_STATUSES: { key: CanonicalOrderStatus; label: string; badgeClass: string }[] = [
   { key: 'PAYMENT_PENDING', label: 'Payment Pending', badgeClass: 'bg-amber-50 text-amber-800 border-amber-200' },

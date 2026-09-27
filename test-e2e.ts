@@ -18,6 +18,7 @@ import {
   deleteCollegeInDb,
   updateUserProfile
 } from './src/server/models';
+import { normalizeApiBase } from './src/config';
 import { DateTime } from 'luxon';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -267,6 +268,37 @@ async function runTests() {
 
   const collegesAfterDelete = await getColleges();
   assert(!collegesAfterDelete.some(c => c.id === createdCollege.id || c._id === createdCollege._id), `College removed from active list`);
+
+  // --- 9. Test Frontend API Base Normalization ---
+  console.log('\n--- 9. Testing Frontend API Base URL Normalization ---');
+  assert(
+    normalizeApiBase('https://cakecampus-backend.onrender.com/api', false) === 'https://cakecampus-backend.onrender.com',
+    'Strips trailing /api from deployed backend URL'
+  );
+  assert(
+    normalizeApiBase('https://cakecampus-backend.onrender.com/api/', false) === 'https://cakecampus-backend.onrender.com',
+    'Strips trailing /api/ with slash from deployed backend URL'
+  );
+  assert(
+    normalizeApiBase('https://cakecampus-backend.onrender.com/', false) === 'https://cakecampus-backend.onrender.com',
+    'Strips trailing slash from deployed backend URL'
+  );
+  assert(
+    normalizeApiBase('https://cakecampus-backend.onrender.com', false) === 'https://cakecampus-backend.onrender.com',
+    'Preserves exact deployed backend URL'
+  );
+  assert(
+    normalizeApiBase('', false) === '',
+    'Defaults to relative URL in production when VITE_API_URL is unset'
+  );
+  assert(
+    normalizeApiBase(undefined, false) === '',
+    'Defaults to relative URL in production when VITE_API_URL is undefined'
+  );
+  assert(
+    normalizeApiBase('', true) === 'http://localhost:4000',
+    'Defaults to localhost:4000 in dev mode when VITE_API_URL is unset'
+  );
 
   console.log(`\n🎉 Test Suite Completed: ${passed}/${total} assertions passed.`);
 }

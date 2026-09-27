@@ -3,6 +3,7 @@ import { CakeItem, CartItem, OrderData, ScreenType, AdminUser, CustomerUser, Col
 import { INITIAL_CAKES } from '../server/seedData';
 import { onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { auth as firebaseAuth } from '../firebase';
+import { API_BASE, formatApiError } from '../config';
 
 interface AppContextType {
   // Navigation
@@ -73,7 +74,6 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 const getUserCartStorageKey = (user?: CustomerUser | null): string => {
   const identifier = user?.email || user?.id;
@@ -400,7 +400,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAdminUser(data.admin);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Server connection error.' };
+      return { success: false, error: formatApiError(err, 'Admin login failed.') };
     }
   };
 
